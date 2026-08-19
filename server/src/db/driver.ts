@@ -23,8 +23,15 @@ export function getDriver(): Driver {
 
   const { COGNODB_URI, COGNODB_USER, COGNODB_PASSWORD } = env;
 
+  // On a long-lived server there is one process and one pool, so 20 is
+  // comfortable against the free tier's 200-connection ceiling. On Vercel each
+  // warm lambda holds its own pool and the platform scales instances out
+  // independently, so the same number would exhaust the ceiling under load —
+  // a handful of concurrent instances is plenty at 3 apiece.
+  const isServerless = Boolean(process.env['VERCEL'] || process.env['AWS_LAMBDA_FUNCTION_NAME']);
+
   driver = neo4j.driver(COGNODB_URI, neo4j.auth.basic(COGNODB_USER, COGNODB_PASSWORD), {
-    maxConnectionPoolSize: 20,
+    maxConnectionPoolSize: isServerless ? 3 : 20,
     connectionAcquisitionTimeout: 15_000,
     connectionTimeout: 15_000,
     maxTransactionRetryTime: 12_000,

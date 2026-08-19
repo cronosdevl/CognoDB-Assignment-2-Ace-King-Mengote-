@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+
 
 import compression from 'compression';
 import cors from 'cors';
@@ -53,8 +53,17 @@ export function createApp(): Express {
 
   app.use('/api', apiRouter);
 
-  const clientDist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../client/dist');
-  if (isProduction && existsSync(clientDist)) {
+  // Single-service mode: one process serves the API and the built SPA, which is
+  // how the Render deployment runs. On Vercel the static files are served by the
+  // CDN and this function only ever handles /api, so no candidate exists and the
+  // block is skipped. Resolved from cwd rather than `import.meta.url` so the
+  // module still loads if the serverless build emits CommonJS.
+  const clientDist = [
+    path.resolve(process.cwd(), 'client/dist'),
+    path.resolve(process.cwd(), '../client/dist'),
+  ].find((candidate) => existsSync(path.join(candidate, 'index.html')));
+
+  if (isProduction && clientDist) {
     logger.info('Serving built client', { path: clientDist });
     app.use(express.static(clientDist, { maxAge: '1h', index: false }));
     app.get(/^(?!\/api).*/, (_request, response) => {

@@ -1,14 +1,21 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import dotenv from 'dotenv';
 import { z } from 'zod';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
-
+/**
+ * Walk up from the working directory looking for a `.env`.
+ *
+ * Deliberately based on `process.cwd()` rather than `import.meta.url`: the
+ * serverless build may compile this module to CommonJS, where `import.meta` is
+ * empty and `fileURLToPath(undefined)` throws at module load — which would take
+ * the whole function down before it could report anything useful. On a hosting
+ * platform there is no `.env` at all and the real environment variables are
+ * injected, so finding nothing is the expected outcome there.
+ */
 function loadDotEnv(): void {
-  let dir = here;
+  let dir = process.cwd();
   for (let i = 0; i < 6; i += 1) {
     const candidate = path.join(dir, '.env');
     if (existsSync(candidate)) {
