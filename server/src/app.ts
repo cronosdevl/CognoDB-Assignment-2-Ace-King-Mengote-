@@ -26,16 +26,36 @@ export function createApp(): Express {
   app.use(compression());
   app.use(express.json({ limit: '256kb' }));
 
+  /**
+   * Allow same-origin automatically, and anything explicitly listed in
+   * CORS_ORIGIN on top of that.
+   *
+   * Deriving same-origin from the request rather than from configuration
+   * matters on Vercel: the API and the SPA share a deployment, but every
+   * preview gets its own hostname, so any value pinned in an env var would be
+   * stale for all but one of them. CORS_ORIGIN stays meaningful for the split
+   * deployment, where the client is hosted apart from the API.
+   */
+  const isAllowedOrigin = (origin: string | undefined, host: string | undefined): boolean => {
+    // Same-origin browser requests omit the header entirely.
+    if (!origin) return true;
+    if (env.CORS_ORIGIN.includes('*') || env.CORS_ORIGIN.includes(origin)) return true;
+    if (!host) return false;
+    try {
+      return new URL(origin).host === host;
+    } catch {
+      return false;
+    }
+  };
+
   app.use(
-    cors({
-      origin(origin, callback) {
-        if (!origin || env.CORS_ORIGIN.includes(origin) || env.CORS_ORIGIN.includes('*')) {
-          callback(null, true);
-          return;
-        }
-        callback(new Error(`Origin ${origin} is not allowed by CORS`));
-      },
-      credentials: false,
+    cors((request, callback) => {
+      const origin = request.headers.origin;
+      const allowed = isAllowedOrigin(origin, request.headers.host);
+      if (!allowed) {
+        logger.warn('Blocked cross-origin request', { origin, host: request.headers.host });
+      }
+      callback(null, { origin: allowed, credentials: false });
     }),
   );
 
