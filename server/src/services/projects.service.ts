@@ -16,6 +16,7 @@ import {
   HIDDEN_EXPERTS,
   LIST_PROJECTS,
   PROJECT_CANDIDATES,
+  PROJECT_COVERAGE,
   PROJECT_REQUIREMENTS,
 } from '../graph/cypher/projects.js';
 import { field, listField, optionalField, round, toNumber, uniqueBy } from '../graph/mappers.js';
@@ -37,13 +38,30 @@ export async function listProjects(options: ListProjectsOptions): Promise<Pagina
     offset: options.offset,
   };
 
-  const [items, totals] = await Promise.all([
-    read(LIST_PROJECTS, params, (record) => {
-      const project = field<ProjectSummary>(record, 'project');
-      return { ...project, coverage: round(project.coverage, 3) };
-    }),
+  const [rows, totals] = await Promise.all([
+    read(LIST_PROJECTS, params, (record) => field<ProjectSummary>(record, 'project')),
     read(COUNT_PROJECTS, params, (record) => toNumber(record.get('total'))),
   ]);
+
+  // Coverage is a second query over just this page of projects — see the note
+  // on PROJECT_COVERAGE for why it cannot ride along with the listing.
+  const coverage = await read(
+    PROJECT_COVERAGE,
+    { projectIds: rows.map((project) => project.id) },
+    (record) => ({
+      projectId: field<string>(record, 'projectId'),
+      requiredSkillCount: toNumber(record.get('requiredSkillCount')),
+      coveredCount: toNumber(record.get('coveredCount')),
+    }),
+  );
+  const byProject = new Map(coverage.map((entry) => [entry.projectId, entry]));
+
+  const items = rows.map((project) => {
+    const entry = byProject.get(project.id);
+    // A project with no requirements is vacuously fully covered.
+    const ratio = !entry || entry.requiredSkillCount === 0 ? 1 : entry.coveredCount / entry.requiredSkillCount;
+    return { ...project, coverage: round(ratio, 3) };
+  });
 
   return { items, total: totals[0] ?? 0, limit: options.limit, offset: options.offset };
 }

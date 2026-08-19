@@ -4,9 +4,10 @@ Findings from building against **CognoDB v0.9.11** (Bolt 5.4, free `c0` tier),
 using the official `neo4j-driver` for JavaScript.
 
 CognoDB speaks openCypher and works with the Neo4j drivers, but it is a pre-1.0
-engine and a few Neo4j-flavoured constructs behave differently. Two of the three
-below fail loudly; **one returns wrong answers silently**, which is the one worth
-reading carefully.
+engine and several Neo4j-flavoured constructs behave differently. One of the
+four below fails loudly. **Three return wrong answers silently** — no error, no
+warning, just plausible numbers that are not true. Those are the ones worth
+reading carefully, and they are the reason this file exists.
 
 Everything here was found by probing the live instance and is reflected in the
 queries in `server/src/graph/cypher/`.
@@ -57,7 +58,51 @@ Consistent with §1: the negation collapses to "has no `WORKED_ON` edge at all".
 **Rule adopted:** anti-joins are written as an empty comprehension. This is why
 the hidden-experts and candidate queries look the way they do.
 
-## 3. Pattern comprehensions cannot nest
+## 3. `OPTIONAL MATCH` ignores already-bound nodes ⚠️ silent
+
+The most damaging of the four, and the hardest to spot. When both endpoints of
+an `OPTIONAL MATCH` are already bound, the binding on the second one is
+discarded:
+
+```cypher
+MATCH (p:Person {id: 'person-001'})
+MATCH (s:Skill  {id: 'typescript'})
+
+MATCH (p)-[h:HAS_SKILL]->(s)           RETURN count(h)   -- 1   ✅
+OPTIONAL MATCH (p)-[h:HAS_SKILL]->(s)  RETURN count(h)   -- 13  ❌ every skill p holds
+```
+
+13 is exactly how many skills that person has. The clause behaves as
+`OPTIONAL MATCH (p)-[h:HAS_SKILL]->(:Skill)`.
+
+The damage is arithmetic rather than a crash. `OPTIONAL MATCH (p)-[owned:HAS_SKILL]->(s)`
+is the natural way to ask "what level does this person have in *this* skill",
+and it is how skill gaps, role readiness and project coverage were all written.
+Instead of one row per requirement, each produced one row per requirement × per
+skill the person holds — so gap lists were duplicated, readiness percentages
+were computed over the wrong denominator, and project coverage was inflated
+because almost every requirement looked satisfied by somebody.
+
+Plain `MATCH` is correct. So is a flat pattern comprehension:
+
+```cypher
+coalesce(head([(p)-[h:HAS_SKILL]->(x:Skill) WHERE x.id = s.id | h.level]), 0) AS currentLevel
+```
+
+**Rule adopted:** `OPTIONAL MATCH` is used only where the far node is *free*
+(`OPTIONAL MATCH (pr)<-[w:WORKED_ON]-(person:Person)`), which behaves correctly.
+Anything with both ends bound goes through the `levelInSkill()` and
+`coverCount()` helpers in `cypher/fragments.ts`.
+
+**How it was caught.** Not by reading the code — the query looked obviously
+right. `npm run verify` logs the row count of every statement, and a skill-gap
+query for a two-role path was returning 115 rows where about ten were possible.
+The independent check is that `npm run dataset:check` computes the same
+statistics in TypeScript from the generated data, with no database involved:
+both now report 11 skills resting on a single expert and ~92% project coverage.
+Two implementations agreeing is the evidence that the Cypher is right.
+
+## 4. Pattern comprehensions cannot nest
 
 ```
 pattern comprehension requires a store context
@@ -103,8 +148,11 @@ Verified against the live instance:
 - flat pattern comprehensions, with an inline `WHERE` and with an undirected leg
 - deeply chained patterns (a five-hop comprehension for second-degree distance)
 - `reduce()`, `head()`, `size()`, list comprehensions, list slicing (`[0..3]`)
-- `collect(CASE … END)[0]` for best-of-group after an `ORDER BY`
-- `OPTIONAL MATCH` with aggregation, `avg()`, `count(DISTINCT …)`
+- `collect(…)` as an aggregation — but the `[0]` must be a *separate* `WITH`
+  clause. Written inline as `collect(…)[0]`, CognoDB does not treat it as an
+  aggregation and emits one row per candidate instead of one per group.
+- `OPTIONAL MATCH` where the far node is free, with aggregation, `avg()`,
+  `count(DISTINCT …)`
 - `labels()`, `type()`, `nodes()`, `relationships()` on a path
 - `CREATE CONSTRAINT … IF NOT EXISTS` and `CREATE INDEX … IF NOT EXISTS`
 - batched `UNWIND … MERGE` writes

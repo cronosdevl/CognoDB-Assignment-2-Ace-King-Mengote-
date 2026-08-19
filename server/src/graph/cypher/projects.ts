@@ -1,5 +1,5 @@
 import { defineQuery } from '../../db/query.js';
-import { PROJECT_FILTER, personSummary } from './fragments.js';
+import { coverCount, PROJECT_FILTER, personSummary } from './fragments.js';
 
 /**
  * Directory listing. `coverage` is computed in the query rather than the
@@ -14,21 +14,6 @@ export const LIST_PROJECTS = defineQuery(
   WITH pr
   ORDER BY pr.status ASC, pr.name ASC
   SKIP $offset LIMIT $limit
-
-  // Headcount first, on its own, so it is not multiplied by the requirement rows.
-  OPTIONAL MATCH (pr)<-[:WORKED_ON]-(member:Person)
-  WITH pr, count(DISTINCT member) AS headcount
-
-  // One row per requirement, carrying how many staffed people satisfy it.
-  OPTIONAL MATCH (pr)-[req:REQUIRES]->(s:Skill)
-  OPTIONAL MATCH (pr)<-[:WORKED_ON]-(m:Person)-[hs:HAS_SKILL]->(s)
-    WHERE hs.level >= req.minLevel
-  WITH pr, headcount, s, count(DISTINCT m) AS coverCount
-
-  WITH pr, headcount,
-       count(s) AS requiredSkillCount,
-       sum(CASE WHEN coverCount > 0 THEN 1 ELSE 0 END) AS coveredCount
-
   RETURN {
     id: pr.id,
     name: pr.name,
@@ -38,12 +23,30 @@ export const LIST_PROJECTS = defineQuery(
     businessUnit: pr.businessUnit,
     startedAt: pr.startedAt,
     endedAt: pr.endedAt,
-    headcount: headcount,
-    requiredSkillCount: requiredSkillCount,
-    coverage: CASE WHEN requiredSkillCount = 0 THEN 1.0
-                   ELSE toFloat(coveredCount) / requiredSkillCount END
+    headcount: size([(pr)<-[:WORKED_ON]-(x:Person) | x]),
+    requiredSkillCount: size([(pr)-[:REQUIRES]->(rs:Skill) | rs]),
+    coverage: 1.0
   } AS project
-  ORDER BY project.status ASC, project.name ASC
+  `,
+);
+
+/**
+ * Per-project requirement coverage for a set of projects.
+ *
+ * Separate from the listing because coverage is a per-requirement aggregation,
+ * and folding it in would need either a comprehension nested inside another
+ * (which CognoDB cannot evaluate) or an OPTIONAL MATCH with both ends bound
+ * (which it evaluates incorrectly). The service merges the two results.
+ */
+export const PROJECT_COVERAGE = defineQuery(
+  'projects:coverage',
+  `
+  UNWIND $projectIds AS pid
+  MATCH (pr:Project {id: pid})-[req:REQUIRES]->(s:Skill)
+  WITH pr, s, ${coverCount('pr', 's', 'req.minLevel', 'lst')} AS covered
+  RETURN pr.id AS projectId,
+         count(s) AS requiredSkillCount,
+         sum(CASE WHEN covered > 0 THEN 1 ELSE 0 END) AS coveredCount
   `,
 );
 
@@ -91,16 +94,14 @@ export const PROJECT_REQUIREMENTS = defineQuery(
   'projects:requirements',
   `
   MATCH (pr:Project {id: $id})-[req:REQUIRES]->(s:Skill)
-  OPTIONAL MATCH (pr)<-[:WORKED_ON]-(m:Person)-[hs:HAS_SKILL]->(s)
-    WHERE hs.level >= req.minLevel
-  WITH s, req, collect(CASE WHEN m IS NULL THEN null ELSE ${personSummary('m')} END) AS coveredBy
   RETURN
     s.id AS skillId,
     s.name AS name,
     s.category AS category,
     req.importance AS importance,
     req.minLevel AS minLevel,
-    coveredBy
+    [(pr)<-[:WORKED_ON]-(m:Person)-[hs:HAS_SKILL]->(sc:Skill)
+     WHERE sc.id = s.id AND hs.level >= req.minLevel | ${personSummary('m')}] AS coveredBy
   ORDER BY req.importance DESC, s.name ASC
   `,
 );

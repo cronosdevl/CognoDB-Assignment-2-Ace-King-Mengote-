@@ -76,7 +76,7 @@ export function PersonDetailPage() {
           <Card>
             <CardHeader
               title="Skills"
-              description={`${plural(person.skills.length, 'skill')} · ${plural(expertSkills.length, 'at expert level')}`}
+              description={`${plural(person.skills.length, 'skill')} · ${expertSkills.length} at expert level`}
             />
             <CardBody>
               {person.skills.length === 0 ? (

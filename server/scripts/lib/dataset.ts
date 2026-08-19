@@ -240,15 +240,8 @@ export function buildDataset(): Dataset {
       levels.set(skill.id, clampLevel(rng.float(1, 3.4)));
     }
 
-    for (const [skillId, level] of levels) {
-      hasSkill.push({
-        personId: id,
-        skillId,
-        level,
-        endorsements: level >= 4 ? rng.int(2, 24) : rng.int(0, 7),
-        lastUsedAt: rng.pastDate(5, level >= 4 ? 240 : 900, REFERENCE_DATE),
-      });
-    }
+    // HAS_SKILL rows are materialised further down, after the experience pass
+    // has had a chance to raise levels.
     personSkillLevels.set(id, levels);
   }
 
@@ -380,6 +373,68 @@ export function buildDataset(): Dataset {
     });
     projectMembers.get(choice.projectId)?.push(person.id);
     staffed.add(person.id);
+  }
+
+  // --- experience -----------------------------------------------------------
+  // Without this pass, only *role* requirements ever push anyone to expert
+  // level, so a skill that no role demands at level 4 — technical writing,
+  // graph modelling, payments — ends up with zero experts company-wide even
+  // though several projects need it. That is a generator artefact, not a
+  // finding, and it hollows out the coverage and key-person-risk features.
+  //
+  // People get better at what they actually ship. For each project requirement,
+  // bring a few of the people staffed on it up to the required level. The
+  // number is deliberately small and sometimes zero, which is what leaves a
+  // realistic spread: genuine gaps where nobody was brought up to standard, and
+  // skills resting on exactly one person.
+  for (const project of PROJECTS) {
+    const members = projectMembers.get(project.id) ?? [];
+    if (members.length === 0) continue;
+
+    for (const [skillId, , minLevel] of project.requires) {
+      // Tuned against `npm run dataset:check`. Coverage turns out to be driven
+      // mostly by role and adjacent skills rather than by this pass, so these
+      // weights are chosen for the expert distribution they produce: ~11 skills
+      // resting on a single person, ~6 with nobody at all, and roughly one
+      // project in three still carrying an uncovered requirement.
+      const trained = rng.weighted([
+        [0, 0.16],
+        [1, 0.3],
+        [2, 0.34],
+        [3, 0.2],
+      ]);
+      if (trained === 0) continue;
+
+      // Whoever was already closest is who grew into it.
+      const ranked = [...members].sort(
+        (a, b) =>
+          (personSkillLevels.get(b)?.get(skillId) ?? 0) - (personSkillLevels.get(a)?.get(skillId) ?? 0),
+      );
+
+      for (const personId of ranked.slice(0, trained)) {
+        const levels = personSkillLevels.get(personId);
+        if (!levels) continue;
+        const current = levels.get(skillId) ?? 0;
+        if (current >= minLevel) continue;
+        // Occasionally they overshoot the bar and become a genuine expert.
+        levels.set(skillId, clampLevel(minLevel + (rng.bool(0.22) ? 1 : 0)));
+      }
+    }
+  }
+
+  // --- materialise HAS_SKILL ------------------------------------------------
+  for (const person of people) {
+    const levels = personSkillLevels.get(person.id);
+    if (!levels) continue;
+    for (const [skillId, level] of levels) {
+      hasSkill.push({
+        personId: person.id,
+        skillId,
+        level,
+        endorsements: level >= 4 ? rng.int(2, 24) : rng.int(0, 7),
+        lastUsedAt: rng.pastDate(5, level >= 4 ? 240 : 900, REFERENCE_DATE),
+      });
+    }
   }
 
   // --- reporting lines ------------------------------------------------------

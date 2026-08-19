@@ -96,7 +96,12 @@ export function useForceLayout(
           .strength(0.55),
       )
       .force('charge', forceManyBody<PositionedNode>().strength(-340).distanceMax(420))
-      .force('collide', forceCollide<PositionedNode>((node) => node.radius + 9).strength(0.9))
+      // Extra room around the focus node so its always-visible name label has
+      // somewhere to sit without landing on a neighbour.
+      .force(
+        'collide',
+        forceCollide<PositionedNode>((node) => node.radius + (node.depth === 0 ? 30 : 11)).strength(0.9),
+      )
       .force('center', forceCenter(width / 2, height / 2).strength(0.06))
       .force('x', forceX<PositionedNode>(width / 2).strength(0.045))
       .force('y', forceY<PositionedNode>(height / 2).strength(0.06))

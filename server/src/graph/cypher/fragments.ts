@@ -64,6 +64,33 @@ export function skillRef(v: string): string {
 }
 
 /**
+ * A person's proficiency in an already-bound skill, or 0.
+ *
+ * The obvious way to write this is `OPTIONAL MATCH (p)-[h:HAS_SKILL]->(s)`,
+ * which is wrong on CognoDB 0.9.x: OPTIONAL MATCH ignores the fact that `s` is
+ * already bound and matches *every* skill the person holds, multiplying the row
+ * count and quietly corrupting any gap or coverage arithmetic downstream. A
+ * flat pattern comprehension that re-checks the id is evaluated correctly.
+ *
+ * @param person bound :Person variable
+ * @param skill  bound :Skill variable
+ * @param tag    unique suffix; two of these in one clause need distinct names
+ */
+export function levelInSkill(person: string, skill: string, tag: string): string {
+  return `coalesce(head([(${person})-[h_${tag}:HAS_SKILL]->(sk_${tag}:Skill)
+            WHERE sk_${tag}.id = ${skill}.id | h_${tag}.level]), 0)`;
+}
+
+/**
+ * How many people staffed on a bound project meet a bound requirement.
+ * Same reasoning as `levelInSkill` — written as a comprehension, not a join.
+ */
+export function coverCount(project: string, skill: string, minLevel: string, tag: string): string {
+  return `size([(${project})<-[:WORKED_ON]-(m_${tag}:Person)-[hs_${tag}:HAS_SKILL]->(sc_${tag}:Skill)
+           WHERE sc_${tag}.id = ${skill}.id AND hs_${tag}.level >= ${minLevel} | m_${tag}])`;
+}
+
+/**
  * Null-tolerant filters shared by the directory screens.
  *
  * Every clause short-circuits when its parameter is null, so one statement

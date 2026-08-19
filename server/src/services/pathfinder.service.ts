@@ -14,6 +14,7 @@ import {
   FIND_SKILL_GAPS,
   GET_ROLE,
   LIST_ROLES,
+  PERSON_SKILL_LEVELS,
   ROLE_READINESS,
   SUGGEST_TARGET_ROLES,
 } from '../graph/cypher/pathfinder.js';
@@ -54,8 +55,43 @@ interface RawGap {
   currentLevel: number;
   gap: number;
   weight: number;
-  headStart: SkillGapEntry['headStart'];
+  /** Every neighbour of the missing skill; the held ones are resolved here. */
+  adjacent: Array<{ skillId: string; name: string; similarity: number }>;
   mentor: { person: PersonSummary; level: number; collaborationDistance: number | null } | null;
+}
+
+/**
+ * The strongest adjacent skill the person actually holds.
+ *
+ * Ranked by similarity × proficiency: knowing a very close skill a little is
+ * worth about as much as knowing a distant one well, and this is the number
+ * that turns "you lack ETL" into "you know Spark at 4, so this is a short
+ * climb". Resolved here rather than in Cypher because filtering the neighbour
+ * list against the person's own skills inside the query would require a
+ * comprehension nested in a comprehension.
+ */
+function bestHeadStart(
+  adjacent: RawGap['adjacent'],
+  held: Map<string, number>,
+): SkillGapEntry['headStart'] {
+  let best: SkillGapEntry['headStart'] = null;
+  let bestScore = 0;
+
+  for (const neighbour of adjacent) {
+    const level = held.get(neighbour.skillId);
+    if (!level) continue;
+    const score = neighbour.similarity * level;
+    if (score <= bestScore) continue;
+    bestScore = score;
+    best = {
+      skillId: neighbour.skillId,
+      name: neighbour.name,
+      level: level as SkillGapEntry['requiredLevel'],
+      similarity: neighbour.similarity,
+    };
+  }
+
+  return best;
 }
 
 /**
@@ -121,7 +157,7 @@ export async function planCareerPath(personId: string, targetRoleId: string): Pr
   const destinationRoles = route.roles.slice(1);
   const roleIds = destinationRoles.map((role) => role.id);
 
-  const [gaps, readiness] = await Promise.all([
+  const [gaps, readiness, ownSkills] = await Promise.all([
     read(FIND_SKILL_GAPS, { personId, roleIds }, (record) => ({
       roleId: field<string>(record, 'roleId'),
       skillId: field<string>(record, 'skillId'),
@@ -131,17 +167,29 @@ export async function planCareerPath(personId: string, targetRoleId: string): Pr
       currentLevel: toNumber(record.get('currentLevel')),
       gap: toNumber(record.get('gap')),
       weight: toNumber(record.get('weight')),
-      headStart: optionalField<RawGap['headStart']>(record, 'headStart'),
+      adjacent: listField<RawGap['adjacent'][number]>(record, 'adjacent'),
       mentor: optionalField<RawGap['mentor']>(record, 'mentor'),
     })),
     read(ROLE_READINESS, { personId, roleIds }, (record) => ({
       roleId: field<string>(record, 'roleId'),
       readiness: toNumber(record.get('readiness')),
     })),
+    read(PERSON_SKILL_LEVELS, { personId }, (record) => ({
+      skillId: field<string>(record, 'skillId'),
+      level: toNumber(record.get('level')),
+    })),
   ]);
 
+  const heldSkills = new Map(ownSkills.map((entry) => [entry.skillId, entry.level]));
+
   const gapsByRole = new Map<string, SkillGapEntry[]>();
+  // Defensive: one gap per (role, skill) whatever the engine returns. A
+  // duplicate row here becomes a duplicate React key downstream.
+  const seenGaps = new Set<string>();
   for (const raw of gaps) {
+    const dedupeKey = `${raw.roleId}|${raw.skillId}`;
+    if (seenGaps.has(dedupeKey)) continue;
+    seenGaps.add(dedupeKey);
     const entry: SkillGapEntry = {
       skillId: raw.skillId,
       name: raw.name,
@@ -149,7 +197,7 @@ export async function planCareerPath(personId: string, targetRoleId: string): Pr
       requiredLevel: raw.requiredLevel,
       currentLevel: raw.currentLevel as SkillGapEntry['currentLevel'],
       gap: raw.gap,
-      headStart: raw.headStart ?? null,
+      headStart: bestHeadStart(raw.adjacent, heldSkills),
       mentor: raw.mentor
         ? {
             ...raw.mentor.person,

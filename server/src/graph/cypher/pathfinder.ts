@@ -1,5 +1,5 @@
 import { defineQuery } from '../../db/query.js';
-import { MENTOR_LEVEL, personSummary, roleSummary } from './fragments.js';
+import { levelInSkill, MENTOR_LEVEL, personSummary, roleSummary } from './fragments.js';
 
 export const LIST_ROLES = defineQuery(
   'roles:list',
@@ -73,31 +73,36 @@ export const FIND_SKILL_GAPS = defineQuery(
   MATCH (p:Person {id: $personId})
   UNWIND $roleIds AS roleId
   MATCH (r:Role {id: roleId})-[req:REQUIRES_SKILL]->(s:Skill)
-  OPTIONAL MATCH (p)-[owned:HAS_SKILL]->(s)
-  WITH p, roleId, r, s, req, coalesce(owned.level, 0) AS currentLevel
+
+  WITH p, roleId, s, req, ${levelInSkill('p', 's', 'own')} AS currentLevel
   WHERE currentLevel < req.minLevel
 
-  // Best adjacent skill the person already holds.
-  OPTIONAL MATCH (s)-[adj:ADJACENT_TO]-(near:Skill)<-[nearHas:HAS_SKILL]-(p)
-  WITH p, roleId, s, req, currentLevel, adj, near, nearHas
-  ORDER BY (coalesce(adj.similarity, 0) * coalesce(nearHas.level, 0)) DESC
+  // Every skill adjacent to the missing one, with how transferable it is.
+  // Which of these the person actually holds is resolved in the service:
+  // filtering here would need a comprehension inside a comprehension, which
+  // CognoDB cannot evaluate.
   WITH p, roleId, s, req, currentLevel,
-       collect(CASE WHEN near IS NULL THEN null ELSE {
-         skillId: near.id, name: near.name, level: nearHas.level, similarity: adj.similarity
-       } END)[0] AS headStart
+       [(s)-[adj:ADJACENT_TO]-(near:Skill) |
+         {skillId: near.id, name: near.name, similarity: adj.similarity}] AS adjacent
 
   // Strongest available mentor, preferring people already in the person's orbit.
+  // Only s is bound here and mentor is free, which is the OPTIONAL MATCH shape
+  // CognoDB handles correctly.
   OPTIONAL MATCH (mentor:Person)-[mh:HAS_SKILL]->(s)
   WHERE mentor.id <> p.id AND mh.level >= ${MENTOR_LEVEL}
-  WITH p, roleId, s, req, currentLevel, headStart, mentor, mh,
+  WITH p, roleId, s, req, currentLevel, adjacent, mentor, mh,
        size([(p)-[:WORKED_ON]->(:Project)<-[:WORKED_ON]-(x:Person) WHERE x.id = mentor.id | x]) AS sharedProjects
   ORDER BY sharedProjects DESC, mh.level DESC, mentor.name ASC
-  WITH p, roleId, s, req, currentLevel, headStart,
+
+  // collect() and [0] must be separate clauses; combined, CognoDB does not
+  // treat it as an aggregation and emits one row per mentor.
+  WITH roleId, s, req, currentLevel, adjacent,
        collect(CASE WHEN mentor IS NULL THEN null ELSE {
          person: ${personSummary('mentor')},
          level: mh.level,
          collaborationDistance: CASE WHEN sharedProjects > 0 THEN 1 ELSE null END
-       } END)[0] AS bestMentor
+       } END) AS mentors
+  WITH roleId, s, req, currentLevel, adjacent, mentors[0] AS bestMentor
 
   RETURN
     roleId,
@@ -108,9 +113,18 @@ export const FIND_SKILL_GAPS = defineQuery(
     currentLevel,
     req.minLevel - currentLevel AS gap,
     req.weight AS weight,
-    headStart,
+    adjacent,
     bestMentor AS mentor
   ORDER BY roleId, gap DESC, weight DESC
+  `,
+);
+
+/** Every skill a person holds, used to resolve head starts against gaps. */
+export const PERSON_SKILL_LEVELS = defineQuery(
+  'pathfinder:person-skills',
+  `
+  MATCH (p:Person {id: $personId})-[hs:HAS_SKILL]->(s:Skill)
+  RETURN s.id AS skillId, s.name AS name, hs.level AS level
   `,
 );
 
@@ -124,13 +138,13 @@ export const ROLE_READINESS = defineQuery(
   MATCH (p:Person {id: $personId})
   UNWIND $roleIds AS roleId
   MATCH (r:Role {id: roleId})-[req:REQUIRES_SKILL]->(s:Skill)
-  OPTIONAL MATCH (p)-[owned:HAS_SKILL]->(s)
+  WITH roleId, req, ${levelInSkill('p', 's', 'rd')} AS level
   WITH roleId,
        sum(req.weight) AS totalWeight,
        sum(req.weight * CASE
-             WHEN coalesce(owned.level, 0) >= req.minLevel THEN 1.0
+             WHEN level >= req.minLevel THEN 1.0
              WHEN req.minLevel = 0 THEN 1.0
-             ELSE toFloat(coalesce(owned.level, 0)) / req.minLevel
+             ELSE toFloat(level) / req.minLevel
            END) AS metWeight
   RETURN roleId,
          CASE WHEN totalWeight = 0 THEN 1.0 ELSE metWeight / totalWeight END AS readiness
@@ -149,12 +163,13 @@ export const SUGGEST_TARGET_ROLES = defineQuery(
   WHERE target.id <> current.id
   WITH DISTINCT p, target
   MATCH (target)-[req:REQUIRES_SKILL]->(s:Skill)
-  OPTIONAL MATCH (p)-[owned:HAS_SKILL]->(s)
+  WITH p, target, req, ${levelInSkill('p', 's', 'sg')} AS level
   WITH p, target,
        sum(req.weight) AS totalWeight,
        sum(req.weight * CASE
-             WHEN coalesce(owned.level, 0) >= req.minLevel THEN 1.0
-             ELSE toFloat(coalesce(owned.level, 0)) / req.minLevel
+             WHEN level >= req.minLevel THEN 1.0
+             WHEN req.minLevel = 0 THEN 1.0
+             ELSE toFloat(level) / req.minLevel
            END) AS metWeight
   WITH target,
        CASE WHEN totalWeight = 0 THEN 1.0 ELSE metWeight / totalWeight END AS readiness

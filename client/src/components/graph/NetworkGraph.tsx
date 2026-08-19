@@ -172,6 +172,12 @@ export function NetworkGraph({ payload, height = 460 }: { payload: GraphPayload;
                     fontSize={11}
                     fontWeight={600}
                     fill="var(--color-ink)"
+                    // A halo in the surface colour keeps the name readable even
+                    // when the layout drops it across a neighbouring node.
+                    stroke="var(--color-surface)"
+                    strokeWidth={3.5}
+                    paintOrder="stroke"
+                    strokeLinejoin="round"
                     className="pointer-events-none select-none"
                   >
                     {node.label.length > 22 ? `${node.label.slice(0, 21)}…` : node.label}

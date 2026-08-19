@@ -1,5 +1,5 @@
 import { defineQuery } from '../../db/query.js';
-import { MENTOR_LEVEL, personSummary } from './fragments.js';
+import { coverCount, MENTOR_LEVEL, personSummary } from './fragments.js';
 
 /**
  * Single points of failure.
@@ -27,9 +27,11 @@ export const SINGLE_POINTS_OF_FAILURE = defineQuery(
   WHERE understudy.id <> expert.id
   WITH s, exposedProjects, topImportance, expert, understudy, uh
   ORDER BY uh.level DESC, understudy.name ASC
+  // collect() and [0] must be separate clauses — see pathfinder.ts.
   WITH s, exposedProjects, topImportance, expert,
        collect(CASE WHEN understudy IS NULL THEN null
-                    ELSE {person: ${personSummary('understudy')}, level: uh.level} END)[0] AS bestUnderstudy
+                    ELSE {person: ${personSummary('understudy')}, level: uh.level} END) AS understudies
+  WITH s, exposedProjects, topImportance, expert, understudies[0] AS bestUnderstudy
 
   RETURN
     s.id AS skillId,
@@ -63,10 +65,12 @@ export const DEPARTURE_IMPACT = defineQuery(
   MATCH (p)-[ph:HAS_SKILL]->(s)
   WHERE ph.level >= req.minLevel
 
-  // …and only if nobody else on the same project also meets the bar.
-  OPTIONAL MATCH (pr)<-[:WORKED_ON]-(other:Person)-[oh:HAS_SKILL]->(s)
-    WHERE other.id <> p.id AND oh.level >= req.minLevel
-  WITH pr, s, req, count(DISTINCT other) AS otherCover
+  // …and only if nobody else on the same project also meets the bar. Written as
+  // a comprehension rather than an OPTIONAL MATCH, which on CognoDB would
+  // ignore the bound skill and count every skill those colleagues hold.
+  WITH p, pr, s, req,
+       size([(pr)<-[:WORKED_ON]-(o:Person)-[oh:HAS_SKILL]->(so:Skill)
+             WHERE so.id = s.id AND o.id <> p.id AND oh.level >= req.minLevel | o]) AS otherCover
   WHERE otherCover = 0
 
   WITH pr, collect({skillId: s.id, name: s.name, minLevel: req.minLevel}) AS orphanedSkills
@@ -159,13 +163,11 @@ export const ACTIVE_PROJECT_COVERAGE = defineQuery(
   `
   MATCH (pr:Project)
   WHERE pr.status = 'active'
-  OPTIONAL MATCH (pr)-[req:REQUIRES]->(s:Skill)
-  OPTIONAL MATCH (pr)<-[:WORKED_ON]-(m:Person)-[hs:HAS_SKILL]->(s)
-    WHERE hs.level >= req.minLevel
-  WITH pr, s, count(DISTINCT m) AS coverCount
+  MATCH (pr)-[req:REQUIRES]->(s:Skill)
+  WITH pr, s, ${coverCount('pr', 's', 'req.minLevel', 'cov')} AS covered
   WITH pr,
        count(s) AS requiredSkillCount,
-       sum(CASE WHEN coverCount > 0 THEN 1 ELSE 0 END) AS coveredCount
+       sum(CASE WHEN covered > 0 THEN 1 ELSE 0 END) AS coveredCount
   RETURN
     count(pr) AS activeProjects,
     avg(CASE WHEN requiredSkillCount = 0 THEN 1.0

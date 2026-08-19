@@ -38,6 +38,15 @@ export function PathfinderPage() {
 
   const { data: roles } = useRoles();
   const { data: suggestions, isPending: suggestionsPending } = useRoleSuggestions(person?.id);
+
+  // Land on a worked example rather than an empty panel. The top suggestion is
+  // the person's most natural next move, so it is also the answer they most
+  // likely wanted; picking it means the screen explains itself on arrival.
+  useEffect(() => {
+    if (targetRoleId || roleIdParam) return;
+    const first = suggestions?.[0]?.role.id;
+    if (first) setTargetRoleId(first);
+  }, [suggestions, targetRoleId, roleIdParam]);
   const { data: path, isPending: pathPending, error, refetch } = useCareerPath(person?.id, targetRoleId || undefined);
 
   const selectPerson = (next: PersonSummary) => {

@@ -47,12 +47,18 @@ export function initials(name: string): string {
 
 /**
  * Traffic-light hue for a 0–1 ratio where higher is better.
- * 25 red · 75 amber · 155 green, interpolated so there are no hard jumps.
+ *
+ * Piecewise rather than a straight interpolation from red to green, because a
+ * linear ramp spends the whole 0.6–0.85 range in the 95–140 band, which renders
+ * as olive — a genuinely good score ends up looking muddy and faintly like a
+ * warning. The ramp holds amber until ~0.65 and then moves quickly through to
+ * green, skipping that band.
  */
 export function ratioHue(ratio: number): number {
   const clamped = Math.max(0, Math.min(1, ratio));
-  if (clamped < 0.5) return 25 + (clamped / 0.5) * 50;
-  return 75 + ((clamped - 0.5) / 0.5) * 80;
+  if (clamped < 0.35) return 25 + (clamped / 0.35) * 20; // red → deep orange
+  if (clamped < 0.65) return 45 + ((clamped - 0.35) / 0.3) * 35; // orange → amber
+  return 145 + ((clamped - 0.65) / 0.35) * 20; // green → deeper green
 }
 
 /** Same scale inverted, for values where higher is worse (risk, severity). */
