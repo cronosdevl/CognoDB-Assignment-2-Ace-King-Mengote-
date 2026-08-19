@@ -29,7 +29,7 @@ export const SINGLE_POINTS_OF_FAILURE = defineQuery(
   ORDER BY uh.level DESC, understudy.name ASC
   WITH s, exposedProjects, topImportance, expert,
        collect(CASE WHEN understudy IS NULL THEN null
-                    ELSE {person: ${personSummary('understudy')}, level: uh.level} END)[0] AS understudy
+                    ELSE {person: ${personSummary('understudy')}, level: uh.level} END)[0] AS bestUnderstudy
 
   RETURN
     s.id AS skillId,
@@ -37,7 +37,7 @@ export const SINGLE_POINTS_OF_FAILURE = defineQuery(
     s.category AS category,
     ${personSummary('expert')} AS expert,
     exposedProjects,
-    understudy,
+    bestUnderstudy AS understudy,
     topImportance * size(exposedProjects) AS severity
   ORDER BY severity DESC, name ASC
   LIMIT $limit

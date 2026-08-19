@@ -9,7 +9,7 @@
  */
 import { redactedConnection } from '../src/config/env.js';
 import { checkHealth, closeDriver } from '../src/db/driver.js';
-import { type CypherQuery, read, writeVoid } from '../src/db/query.js';
+import { type CypherQuery, read, write, writeVoid } from '../src/db/query.js';
 import { logger } from '../src/lib/logger.js';
 import { buildDataset, summariseDataset, type Dataset } from './lib/dataset.js';
 import {
@@ -71,7 +71,9 @@ async function resetDatabase(): Promise<void> {
   logger.warn('--reset supplied: deleting every node in the database');
   let total = 0;
   for (;;) {
-    const [deleted] = await read(DELETE_BATCH, { batchSize: DELETE_BATCH_SIZE }, (record) =>
+    // Must go through `write`: a DETACH DELETE in a read transaction is rejected
+    // by the server, not silently ignored.
+    const [deleted] = await write(DELETE_BATCH, { batchSize: DELETE_BATCH_SIZE }, (record) =>
       Number(record.get('deleted')),
     );
     if (!deleted) break;
