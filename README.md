@@ -424,7 +424,40 @@ of that.
 
 ## Deployment
 
-The repo deploys as two services or one, whichever suits the host.
+### Vercel (one project, frontend + API)
+
+`vercel.json` deploys the whole thing as a single project: the React build is
+served from the CDN and the Express app runs as a serverless function mounted at
+`/api`. Because both live on one origin the browser calls `/api/...` on its own
+domain — there is no second URL to configure and no CORS. Leave
+`VITE_API_BASE_URL` unset in production.
+
+> **Root Directory must be the repository root.** Vercel scans a monorepo and
+> will offer `client/` or `server/` as the project root; whichever is chosen
+> becomes the entire deployment and everything above it — including
+> `vercel.json` and `api/` — becomes invisible. A `server/` root fails with
+> `No workspaces found`; a `client/` root deploys a frontend with no backend.
+> Set **Framework Preset: Other** and leave the build settings blank so
+> `vercel.json` is used.
+
+Environment variables to set in the project: `COGNODB_URI`, `COGNODB_USER`,
+`COGNODB_PASSWORD`, `COGNODB_DATABASE`.
+
+After deploying, `https://<app>.vercel.app/api/health` should report
+`"ok": true`. Expect 1–2 s on the first request after an idle period — that is
+the cold start plus the Bolt TLS handshake, not a slow query.
+
+Two details make this work on a serverless runtime. The connection pool drops
+from 20 to 3 when `VERCEL` is set, because each warm instance holds its own pool
+and the platform scales instances independently, so the long-lived server's
+figure would exhaust the free tier's 200-connection ceiling. And neither
+`config/env.ts` nor `app.ts` uses `import.meta.url`: the function may be
+compiled to CommonJS, where it is empty and `fileURLToPath(undefined)` would
+throw at module load.
+
+### Other hosts
+
+The repo also deploys as two services or one, whichever suits the host.
 
 **Two services (recommended)** — API on Render/Railway/Fly, static client on
 Vercel/Netlify:
