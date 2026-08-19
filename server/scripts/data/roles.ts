@@ -1,0 +1,616 @@
+import type { RoleFamily, SkillLevel } from '@wayfinder/shared';
+
+export interface RoleSeed {
+  id: string;
+  title: string;
+  family: RoleFamily;
+  /** 1 (entry) … 6 (executive). Used for sorting, not for traversal. */
+  level: number;
+  description: string;
+  /** Skills the role expects, with the minimum proficiency and a 0–1 weight. */
+  requires: Array<[skillId: string, minLevel: SkillLevel, weight: number]>;
+}
+
+export const ROLES: RoleSeed[] = [
+  // --- Engineering ladder --------------------------------------------------
+  {
+    id: 'junior-swe',
+    title: 'Junior Software Engineer',
+    family: 'Engineering',
+    level: 1,
+    description: 'Ships well-scoped changes with review and support.',
+    requires: [
+      ['typescript', 2, 0.9],
+      ['testing', 2, 0.7],
+      ['api-design', 1, 0.4],
+    ],
+  },
+  {
+    id: 'swe',
+    title: 'Software Engineer',
+    family: 'Engineering',
+    level: 2,
+    description: 'Owns features end to end within a team.',
+    requires: [
+      ['typescript', 3, 0.9],
+      ['testing', 3, 0.8],
+      ['api-design', 2, 0.6],
+      ['sql', 2, 0.5],
+      ['docker', 2, 0.4],
+    ],
+  },
+  {
+    id: 'senior-swe',
+    title: 'Senior Software Engineer',
+    family: 'Engineering',
+    level: 3,
+    description: 'Leads delivery of substantial systems and raises the bar around them.',
+    requires: [
+      ['typescript', 4, 0.9],
+      ['testing', 4, 0.8],
+      ['api-design', 4, 0.8],
+      ['distributed-systems', 3, 0.7],
+      ['refactoring', 3, 0.6],
+      ['mentoring', 3, 0.6],
+    ],
+  },
+  {
+    id: 'staff-engineer',
+    title: 'Staff Engineer',
+    family: 'Engineering',
+    level: 4,
+    description: 'Sets technical direction spanning several teams.',
+    requires: [
+      ['distributed-systems', 4, 0.9],
+      ['tech-leadership', 4, 0.9],
+      ['api-design', 4, 0.7],
+      ['performance', 3, 0.6],
+      ['event-driven', 3, 0.6],
+      ['mentoring', 4, 0.7],
+    ],
+  },
+  {
+    id: 'principal-engineer',
+    title: 'Principal Engineer',
+    family: 'Engineering',
+    level: 5,
+    description: 'Owns the hardest technical bets across the organisation.',
+    requires: [
+      ['distributed-systems', 5, 0.9],
+      ['tech-leadership', 5, 1.0],
+      ['strategy', 4, 0.8],
+      ['performance', 4, 0.7],
+      ['facilitation', 4, 0.6],
+    ],
+  },
+  {
+    id: 'frontend-engineer',
+    title: 'Frontend Engineer',
+    family: 'Engineering',
+    level: 2,
+    description: 'Builds the interfaces customers actually touch.',
+    requires: [
+      ['react', 3, 0.9],
+      ['typescript', 3, 0.8],
+      ['accessibility', 2, 0.6],
+      ['design-systems', 2, 0.5],
+    ],
+  },
+  {
+    id: 'senior-frontend-engineer',
+    title: 'Senior Frontend Engineer',
+    family: 'Engineering',
+    level: 3,
+    description: 'Owns the frontend architecture of a product surface.',
+    requires: [
+      ['react', 4, 0.9],
+      ['typescript', 4, 0.8],
+      ['design-systems', 4, 0.8],
+      ['accessibility', 3, 0.7],
+      ['performance', 3, 0.6],
+    ],
+  },
+
+  // --- Data & AI ladder ----------------------------------------------------
+  {
+    id: 'data-analyst',
+    title: 'Data Analyst',
+    family: 'Data & AI',
+    level: 1,
+    description: 'Answers business questions with the warehouse.',
+    requires: [
+      ['sql', 3, 0.9],
+      ['dataviz', 2, 0.7],
+      ['product-analytics', 2, 0.6],
+    ],
+  },
+  {
+    id: 'analytics-engineer',
+    title: 'Analytics Engineer',
+    family: 'Data & AI',
+    level: 2,
+    description: 'Builds the modelled layer analysts depend on.',
+    requires: [
+      ['sql', 4, 0.9],
+      ['analytics-eng', 3, 0.9],
+      ['data-modelling', 3, 0.8],
+      ['etl', 3, 0.7],
+    ],
+  },
+  {
+    id: 'data-engineer',
+    title: 'Data Engineer',
+    family: 'Data & AI',
+    level: 2,
+    description: 'Moves data reliably at volume.',
+    requires: [
+      ['etl', 3, 0.9],
+      ['python', 3, 0.8],
+      ['spark', 3, 0.7],
+      ['data-modelling', 3, 0.7],
+    ],
+  },
+  {
+    id: 'senior-data-engineer',
+    title: 'Senior Data Engineer',
+    family: 'Data & AI',
+    level: 3,
+    description: 'Owns the platform every downstream team builds on.',
+    requires: [
+      ['etl', 4, 0.9],
+      ['spark', 4, 0.8],
+      ['data-modelling', 4, 0.8],
+      ['distributed-systems', 3, 0.7],
+      ['database-admin', 3, 0.6],
+    ],
+  },
+  {
+    id: 'data-scientist',
+    title: 'Data Scientist',
+    family: 'Data & AI',
+    level: 2,
+    description: 'Turns messy data into decisions and models.',
+    requires: [
+      ['python', 3, 0.9],
+      ['machine-learning', 3, 0.9],
+      ['experimentation', 3, 0.7],
+      ['sql', 3, 0.6],
+    ],
+  },
+  {
+    id: 'senior-data-scientist',
+    title: 'Senior Data Scientist',
+    family: 'Data & AI',
+    level: 3,
+    description: 'Owns modelling for a whole problem area.',
+    requires: [
+      ['machine-learning', 4, 0.9],
+      ['experimentation', 4, 0.8],
+      ['python', 4, 0.8],
+      ['deep-learning', 3, 0.6],
+      ['mentoring', 3, 0.5],
+    ],
+  },
+  {
+    id: 'ml-engineer',
+    title: 'ML Engineer',
+    family: 'Data & AI',
+    level: 3,
+    description: 'Puts models into production and keeps them there.',
+    requires: [
+      ['machine-learning', 4, 0.9],
+      ['mlops', 4, 0.9],
+      ['python', 4, 0.8],
+      ['kubernetes', 3, 0.6],
+      ['observability', 3, 0.5],
+    ],
+  },
+  {
+    id: 'staff-ml-engineer',
+    title: 'Staff ML Engineer',
+    family: 'Data & AI',
+    level: 4,
+    description: 'Designs the ML platform and the systems around it.',
+    requires: [
+      ['mlops', 5, 0.9],
+      ['deep-learning', 4, 0.8],
+      ['llm-apps', 4, 0.8],
+      ['tech-leadership', 4, 0.8],
+      ['distributed-systems', 4, 0.7],
+    ],
+  },
+  {
+    id: 'ai-research-engineer',
+    title: 'AI Research Engineer',
+    family: 'Data & AI',
+    level: 3,
+    description: 'Prototypes and evaluates frontier-model applications.',
+    requires: [
+      ['llm-apps', 4, 0.9],
+      ['nlp', 4, 0.85],
+      ['vector-search', 3, 0.7],
+      ['deep-learning', 4, 0.7],
+      ['experimentation', 3, 0.6],
+    ],
+  },
+  {
+    id: 'head-of-ai',
+    title: 'Head of AI',
+    family: 'Data & AI',
+    level: 5,
+    description: 'Owns the AI strategy and the team that delivers it.',
+    requires: [
+      ['llm-apps', 4, 0.8],
+      ['strategy', 5, 0.9],
+      ['tech-leadership', 5, 0.9],
+      ['hiring', 4, 0.7],
+      ['machine-learning', 4, 0.7],
+    ],
+  },
+
+  // --- Product ladder ------------------------------------------------------
+  {
+    id: 'associate-pm',
+    title: 'Associate Product Manager',
+    family: 'Product',
+    level: 1,
+    description: 'Runs discrete product problems with guidance.',
+    requires: [
+      ['discovery', 2, 0.8],
+      ['product-analytics', 2, 0.7],
+      ['tech-writing', 2, 0.6],
+    ],
+  },
+  {
+    id: 'product-manager',
+    title: 'Product Manager',
+    family: 'Product',
+    level: 2,
+    description: 'Owns outcomes for a product area.',
+    requires: [
+      ['discovery', 3, 0.9],
+      ['roadmapping', 3, 0.8],
+      ['stakeholder-mgmt', 3, 0.8],
+      ['product-analytics', 3, 0.7],
+      ['user-research', 3, 0.6],
+    ],
+  },
+  {
+    id: 'senior-pm',
+    title: 'Senior Product Manager',
+    family: 'Product',
+    level: 3,
+    description: 'Owns a surface with real commercial consequences.',
+    requires: [
+      ['discovery', 4, 0.9],
+      ['roadmapping', 4, 0.85],
+      ['stakeholder-mgmt', 4, 0.85],
+      ['experimentation', 3, 0.7],
+      ['pricing', 3, 0.6],
+    ],
+  },
+  {
+    id: 'group-pm',
+    title: 'Group Product Manager',
+    family: 'Product',
+    level: 4,
+    description: 'Leads several product managers and their areas.',
+    requires: [
+      ['strategy', 4, 0.9],
+      ['stakeholder-mgmt', 5, 0.85],
+      ['roadmapping', 4, 0.8],
+      ['mentoring', 4, 0.7],
+      ['pricing', 3, 0.6],
+    ],
+  },
+  {
+    id: 'director-product',
+    title: 'Director of Product',
+    family: 'Product',
+    level: 5,
+    description: 'Owns product strategy for a business line.',
+    requires: [
+      ['strategy', 5, 1.0],
+      ['pricing', 4, 0.8],
+      ['hiring', 4, 0.7],
+      ['facilitation', 4, 0.7],
+    ],
+  },
+
+  // --- Design ladder -------------------------------------------------------
+  {
+    id: 'product-designer',
+    title: 'Product Designer',
+    family: 'Design',
+    level: 2,
+    description: 'Designs flows and interfaces for a product area.',
+    requires: [
+      ['interaction-design', 3, 0.9],
+      ['visual-design', 3, 0.8],
+      ['prototyping', 3, 0.7],
+      ['user-research', 2, 0.6],
+    ],
+  },
+  {
+    id: 'senior-product-designer',
+    title: 'Senior Product Designer',
+    family: 'Design',
+    level: 3,
+    description: 'Owns the design of a significant surface end to end.',
+    requires: [
+      ['interaction-design', 4, 0.9],
+      ['visual-design', 4, 0.85],
+      ['design-systems', 3, 0.7],
+      ['accessibility', 3, 0.7],
+      ['user-research', 3, 0.6],
+    ],
+  },
+  {
+    id: 'design-lead',
+    title: 'Design Lead',
+    family: 'Design',
+    level: 4,
+    description: 'Sets craft standards and leads a design group.',
+    requires: [
+      ['design-systems', 4, 0.9],
+      ['mentoring', 4, 0.8],
+      ['visual-design', 4, 0.8],
+      ['facilitation', 3, 0.7],
+      ['ux-writing', 3, 0.5],
+    ],
+  },
+  {
+    id: 'head-of-design',
+    title: 'Head of Design',
+    family: 'Design',
+    level: 5,
+    description: 'Owns design across the company.',
+    requires: [
+      ['strategy', 4, 0.9],
+      ['design-systems', 4, 0.8],
+      ['hiring', 4, 0.8],
+      ['mentoring', 5, 0.8],
+    ],
+  },
+
+  // --- Infrastructure ladder ----------------------------------------------
+  {
+    id: 'platform-engineer',
+    title: 'Platform Engineer',
+    family: 'Infrastructure',
+    level: 2,
+    description: 'Builds the paved road other engineers ship on.',
+    requires: [
+      ['kubernetes', 3, 0.85],
+      ['terraform', 3, 0.8],
+      ['cicd', 3, 0.8],
+      ['docker', 3, 0.7],
+    ],
+  },
+  {
+    id: 'senior-platform-engineer',
+    title: 'Senior Platform Engineer',
+    family: 'Infrastructure',
+    level: 3,
+    description: 'Owns platform architecture and its operational contract.',
+    requires: [
+      ['kubernetes', 4, 0.9],
+      ['terraform', 4, 0.85],
+      ['aws', 4, 0.8],
+      ['observability', 3, 0.7],
+      ['cost-optimisation', 3, 0.6],
+    ],
+  },
+  {
+    id: 'sre',
+    title: 'Site Reliability Engineer',
+    family: 'Infrastructure',
+    level: 3,
+    description: 'Keeps production honest with SLOs and error budgets.',
+    requires: [
+      ['sre', 4, 0.9],
+      ['observability', 4, 0.9],
+      ['incident-response', 3, 0.8],
+      ['kubernetes', 3, 0.7],
+      ['networking', 3, 0.6],
+    ],
+  },
+  {
+    id: 'infrastructure-lead',
+    title: 'Infrastructure Lead',
+    family: 'Infrastructure',
+    level: 4,
+    description: 'Owns the platform roadmap and the team delivering it.',
+    requires: [
+      ['tech-leadership', 4, 0.9],
+      ['kubernetes', 4, 0.8],
+      ['cost-optimisation', 4, 0.8],
+      ['sre', 4, 0.7],
+      ['mentoring', 4, 0.7],
+    ],
+  },
+
+  // --- Security ladder -----------------------------------------------------
+  {
+    id: 'security-engineer',
+    title: 'Security Engineer',
+    family: 'Security',
+    level: 2,
+    description: 'Finds and fixes weaknesses before anyone else does.',
+    requires: [
+      ['appsec', 3, 0.9],
+      ['threat-modelling', 3, 0.8],
+      ['iam', 3, 0.7],
+    ],
+  },
+  {
+    id: 'senior-security-engineer',
+    title: 'Senior Security Engineer',
+    family: 'Security',
+    level: 3,
+    description: 'Owns a security domain and the response around it.',
+    requires: [
+      ['appsec', 4, 0.9],
+      ['threat-modelling', 4, 0.85],
+      ['incident-response', 4, 0.8],
+      ['cryptography', 3, 0.6],
+      ['compliance', 3, 0.6],
+    ],
+  },
+  {
+    id: 'security-architect',
+    title: 'Security Architect',
+    family: 'Security',
+    level: 4,
+    description: 'Designs how the whole system defends itself.',
+    requires: [
+      ['threat-modelling', 5, 0.95],
+      ['cryptography', 4, 0.8],
+      ['iam', 4, 0.8],
+      ['distributed-systems', 3, 0.6],
+      ['tech-leadership', 4, 0.7],
+    ],
+  },
+
+  // --- Management ladder ---------------------------------------------------
+  {
+    id: 'engineering-manager',
+    title: 'Engineering Manager',
+    family: 'Management',
+    level: 4,
+    description: 'Owns the health, growth and delivery of a team.',
+    requires: [
+      ['mentoring', 4, 0.95],
+      ['hiring', 4, 0.85],
+      ['facilitation', 4, 0.8],
+      ['roadmapping', 3, 0.7],
+      ['tech-leadership', 3, 0.6],
+    ],
+  },
+  {
+    id: 'director-engineering',
+    title: 'Director of Engineering',
+    family: 'Management',
+    level: 5,
+    description: 'Leads managers and owns delivery across a department.',
+    requires: [
+      ['strategy', 4, 0.9],
+      ['hiring', 5, 0.85],
+      ['mentoring', 5, 0.85],
+      ['facilitation', 4, 0.8],
+      ['tech-leadership', 4, 0.7],
+    ],
+  },
+  {
+    id: 'vp-engineering',
+    title: 'VP Engineering',
+    family: 'Management',
+    level: 6,
+    description: 'Accountable for engineering as a whole.',
+    requires: [
+      ['strategy', 5, 1.0],
+      ['hiring', 5, 0.9],
+      ['facilitation', 5, 0.85],
+      ['tech-leadership', 5, 0.8],
+    ],
+  },
+];
+
+/**
+ * The career ladder itself: a directed graph of realistic next moves with the
+ * typical time spent before making them.
+ *
+ * Crucially this is *not* a tree. Lateral moves across families (senior
+ * engineer → ML engineer, senior designer → product manager, SRE → security)
+ * create the cycles and alternate routes that make shortest-path search over
+ * the ladder worth doing at all.
+ */
+export const ROLE_PROGRESSION: Array<[from: string, to: string, typicalMonths: number]> = [
+  // Engineering
+  ['junior-swe', 'swe', 18],
+  ['junior-swe', 'frontend-engineer', 15],
+  ['swe', 'senior-swe', 24],
+  ['swe', 'frontend-engineer', 9],
+  ['swe', 'data-engineer', 15],
+  ['swe', 'platform-engineer', 15],
+  ['frontend-engineer', 'senior-frontend-engineer', 22],
+  ['frontend-engineer', 'swe', 10],
+  ['frontend-engineer', 'product-designer', 18],
+  ['senior-frontend-engineer', 'senior-swe', 12],
+  ['senior-frontend-engineer', 'design-lead', 24],
+  ['senior-frontend-engineer', 'staff-engineer', 26],
+  ['senior-swe', 'staff-engineer', 30],
+  ['senior-swe', 'engineering-manager', 20],
+  ['senior-swe', 'ml-engineer', 20],
+  ['senior-swe', 'senior-platform-engineer', 16],
+  ['senior-swe', 'senior-security-engineer', 20],
+  ['staff-engineer', 'principal-engineer', 36],
+  ['staff-engineer', 'engineering-manager', 14],
+  ['staff-engineer', 'infrastructure-lead', 18],
+  ['principal-engineer', 'director-engineering', 24],
+
+  // Data & AI
+  ['data-analyst', 'analytics-engineer', 18],
+  ['data-analyst', 'data-scientist', 22],
+  ['data-analyst', 'associate-pm', 20],
+  ['analytics-engineer', 'senior-data-engineer', 24],
+  ['analytics-engineer', 'data-scientist', 18],
+  ['data-engineer', 'senior-data-engineer', 24],
+  ['data-engineer', 'ml-engineer', 22],
+  ['data-engineer', 'analytics-engineer', 12],
+  ['senior-data-engineer', 'staff-ml-engineer', 30],
+  ['senior-data-engineer', 'engineering-manager', 24],
+  ['data-scientist', 'senior-data-scientist', 24],
+  ['data-scientist', 'ml-engineer', 20],
+  ['senior-data-scientist', 'ai-research-engineer', 14],
+  ['senior-data-scientist', 'staff-ml-engineer', 26],
+  ['senior-data-scientist', 'head-of-ai', 36],
+  ['ml-engineer', 'staff-ml-engineer', 28],
+  ['ml-engineer', 'ai-research-engineer', 16],
+  ['ai-research-engineer', 'staff-ml-engineer', 22],
+  ['ai-research-engineer', 'head-of-ai', 34],
+  ['staff-ml-engineer', 'head-of-ai', 30],
+  ['staff-ml-engineer', 'principal-engineer', 26],
+
+  // Product
+  ['associate-pm', 'product-manager', 20],
+  ['product-manager', 'senior-pm', 24],
+  ['product-manager', 'data-analyst', 14],
+  ['senior-pm', 'group-pm', 28],
+  ['senior-pm', 'head-of-ai', 40],
+  ['group-pm', 'director-product', 30],
+  ['director-product', 'vp-engineering', 42],
+
+  // Design
+  ['product-designer', 'senior-product-designer', 24],
+  ['product-designer', 'frontend-engineer', 20],
+  ['senior-product-designer', 'design-lead', 28],
+  ['senior-product-designer', 'product-manager', 18],
+  ['design-lead', 'head-of-design', 30],
+  ['design-lead', 'group-pm', 26],
+
+  // Infrastructure
+  ['platform-engineer', 'senior-platform-engineer', 24],
+  ['platform-engineer', 'sre', 18],
+  ['platform-engineer', 'swe', 12],
+  ['sre', 'senior-platform-engineer', 16],
+  ['sre', 'security-engineer', 18],
+  ['sre', 'infrastructure-lead', 28],
+  ['senior-platform-engineer', 'infrastructure-lead', 26],
+  ['senior-platform-engineer', 'staff-engineer', 24],
+  ['infrastructure-lead', 'director-engineering', 30],
+
+  // Security
+  ['security-engineer', 'senior-security-engineer', 24],
+  ['security-engineer', 'sre', 16],
+  ['senior-security-engineer', 'security-architect', 28],
+  ['security-architect', 'principal-engineer', 24],
+  ['security-architect', 'director-engineering', 30],
+
+  // Management
+  ['engineering-manager', 'director-engineering', 30],
+  ['engineering-manager', 'group-pm', 24],
+  ['director-engineering', 'vp-engineering', 36],
+  ['head-of-design', 'vp-engineering', 40],
+  ['head-of-ai', 'vp-engineering', 34],
+];

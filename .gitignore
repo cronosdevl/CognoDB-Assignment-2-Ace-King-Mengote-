@@ -1,0 +1,33 @@
+# dependencies
+node_modules/
+.npm/
+
+# build output
+dist/
+build/
+*.tsbuildinfo
+
+# secrets — never commit connection details
+.env
+.env.*
+!.env.example
+
+# logs
+*.log
+npm-debug.log*
+logs/
+
+# editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# the assignment brief itself — not part of the deliverable
+requirements.pdf
+
+# misc
+coverage/
+.cache/
+.vercel
+.render
