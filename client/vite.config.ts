@@ -12,6 +12,9 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(here, 'src'),
+      // The shared contract ships as TypeScript source rather than a build
+      // artefact; aliasing it directly keeps `npm run dev` free of a build step
+      // in the shared workspace.
       '@wayfinder/shared': path.resolve(here, '../shared/src/index.ts'),
     },
   },
