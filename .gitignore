@@ -8,7 +8,9 @@ build/
 *.tsbuildinfo
 
 # secrets — never commit connection details
-
+.env
+.env.*
+!.env.example
 
 # logs
 *.log
