@@ -155,6 +155,32 @@ async function main(): Promise<void> {
     }
   }
 
+  // A single project can legitimately have no gaps and no candidates. Across
+  // every active project, though, empty panels mean the seed data is too
+  // neatly staffed for these features to demonstrate anything — so check the
+  // whole set rather than trusting one sample.
+  if (projects && projects.items.length > 0) {
+    heading('Feature coverage across active projects');
+    const details = await Promise.all(projects.items.map((project) => getProject(project.id)));
+    const experts = await Promise.all(projects.items.map((project) => listHiddenExperts(project.id, 5)));
+
+    const withGaps = details.filter((project) => project.gaps.length > 0).length;
+    const withCandidates = details.filter((project) => project.candidates.length > 0).length;
+    const withExperts = experts.filter((list) => list.length > 0).length;
+    const closeExperts = experts.flat().filter((expert) => expert.distance <= 2).length;
+
+    line('projects sampled', details.length);
+    line('with an uncovered skill', withGaps);
+    line('with suggested additions', withCandidates);
+    line('with hidden experts', withExperts);
+    line('experts within 2 hops', closeExperts);
+
+    if (withCandidates === 0 || withExperts === 0) {
+      failures += 1;
+      console.error('  ✗ every project has empty candidate/expert panels — the seed is over-staffed');
+    }
+  }
+
   heading('Risk — single points of failure');
   const spof = await step('single points of failure', () => listSinglePointsOfFailure(5));
   if (spof) {

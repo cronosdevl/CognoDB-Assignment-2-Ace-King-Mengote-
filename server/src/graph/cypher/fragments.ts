@@ -14,9 +14,14 @@ export const MENTOR_LEVEL = 4;
 /**
  * Project a `Person` node into the `PersonSummary` DTO.
  *
- * Nested pattern comprehensions pull the role, team, department and location in
- * the same traversal, which keeps a person's full card to a single round trip
- * even when they are nested three levels deep inside a `collect()`.
+ * Pure property reads, no traversal. The role, team, department and location
+ * labels are denormalised onto the node at seed time precisely so this
+ * projection can be used *anywhere* — including inside a pattern comprehension,
+ * where CognoDB cannot evaluate a second one ("pattern comprehension requires a
+ * store context"). It is also markedly faster than four extra hops per row.
+ *
+ * The HOLDS_ROLE / MEMBER_OF / BASED_IN edges remain authoritative and are what
+ * every traversal query actually walks; these are display copies.
  *
  * @param v the already-bound Cypher variable holding the :Person node
  */
@@ -29,24 +34,27 @@ export function personSummary(v: string): string {
     avatarHue: ${v}.avatarHue,
     openToMove: ${v}.openToMove,
     tenureMonths: ${v}.tenureMonths,
-    roleId: head([(${v})-[:HOLDS_ROLE]->(__r:Role) | __r.id]),
-    roleTitle: head([(${v})-[:HOLDS_ROLE]->(__r:Role) | __r.title]),
-    teamId: head([(${v})-[:MEMBER_OF]->(__t:Team) | __t.id]),
-    teamName: head([(${v})-[:MEMBER_OF]->(__t:Team) | __t.name]),
-    departmentName: head([(${v})-[:MEMBER_OF]->(:Team)-[:PART_OF]->(__d:Department) | __d.name]),
-    locationId: head([(${v})-[:BASED_IN]->(__l:Location) | __l.id]),
-    locationLabel: head([(${v})-[:BASED_IN]->(__l:Location) | __l.city + ', ' + __l.country])
+    roleId: ${v}.roleId,
+    roleTitle: ${v}.roleTitle,
+    teamId: ${v}.teamId,
+    teamName: ${v}.teamName,
+    departmentName: ${v}.departmentName,
+    locationId: ${v}.locationId,
+    locationLabel: ${v}.locationLabel
   }`;
 }
 
-/** Project a `Role` node into the `RoleSummary` DTO (without the holder count). */
+/**
+ * Project a `Role` node into the `RoleSummary` DTO.
+ * `holders` is cached on the node by the seed, for the same reason as above.
+ */
 export function roleSummary(v: string): string {
   return `{
     id: ${v}.id,
     title: ${v}.title,
     family: ${v}.family,
     level: ${v}.level,
-    holders: size([(${v})<-[:HOLDS_ROLE]-(__p:Person) | __p])
+    holders: coalesce(${v}.holders, 0)
   }`;
 }
 
@@ -61,19 +69,26 @@ export function skillRef(v: string): string {
  * Every clause short-circuits when its parameter is null, so one statement
  * serves every combination of filters instead of assembling query text per
  * request. `$q` is expected to arrive already lower-cased.
+ *
+ * Existence is expressed as `size([pattern]) > 0` rather than the more natural
+ * pattern predicate `(p)-[:HAS_SKILL]->(:Skill {id: $skillId})`. CognoDB 0.9.x
+ * evaluates a pattern predicate while ignoring the inline property constraint,
+ * so that form silently matches anyone with *any* skill instead of the one
+ * asked for — a wrong answer rather than an error. The comprehension form is
+ * evaluated correctly. See docs/queries.md.
  */
 export const PEOPLE_FILTER = `
   ($q IS NULL OR toLower(p.name) CONTAINS $q OR toLower(p.title) CONTAINS $q OR toLower(p.seniority) CONTAINS $q)
-  AND ($roleId IS NULL OR (p)-[:HOLDS_ROLE]->(:Role {id: $roleId}))
-  AND ($teamId IS NULL OR (p)-[:MEMBER_OF]->(:Team {id: $teamId}))
-  AND ($skillId IS NULL OR (p)-[:HAS_SKILL]->(:Skill {id: $skillId}))
+  AND ($roleId IS NULL OR p.roleId = $roleId)
+  AND ($teamId IS NULL OR p.teamId = $teamId)
+  AND ($skillId IS NULL OR size([(p)-[:HAS_SKILL]->(fs:Skill) WHERE fs.id = $skillId | fs]) > 0)
   AND ($openToMove IS NULL OR p.openToMove = $openToMove)
 `;
 
 export const PROJECT_FILTER = `
   ($q IS NULL OR toLower(pr.name) CONTAINS $q OR toLower(pr.code) CONTAINS $q OR toLower(pr.summary) CONTAINS $q)
   AND ($status IS NULL OR pr.status = $status)
-  AND ($skillId IS NULL OR (pr)-[:REQUIRES]->(:Skill {id: $skillId}))
+  AND ($skillId IS NULL OR size([(pr)-[:REQUIRES]->(fps:Skill) WHERE fps.id = $skillId | fps]) > 0)
 `;
 
 export const SKILL_FILTER = `

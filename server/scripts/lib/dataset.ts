@@ -24,6 +24,21 @@ export interface PersonRow {
   roleId: string;
   teamId: string;
   locationId: string;
+
+  /**
+   * Denormalised display attributes.
+   *
+   * The HOLDS_ROLE / MEMBER_OF / BASED_IN edges below remain authoritative and
+   * are what every traversal uses. These copies exist purely so that projecting
+   * a person into a card is a property read rather than four more hops — which
+   * matters because a person card is frequently produced from inside a
+   * comprehension, and CognoDB cannot nest a pattern comprehension inside
+   * another one. Written only by the seed, from the same source as the edges.
+   */
+  roleTitle: string;
+  teamName: string;
+  departmentName: string;
+  locationLabel: string;
 }
 
 export interface HasSkillRow {
@@ -169,6 +184,9 @@ export function buildDataset(): Dataset {
     const joinedAt = rng.pastDate(tenureMonths * 30, tenureMonths * 30 + 25, REFERENCE_DATE);
     const focusSkill = skillById.get(role.requires[0]?.[0] ?? 'typescript');
 
+    const location = rng.pick(LOCATIONS);
+    const department = DEPARTMENTS.find((entry) => entry.id === team.departmentId);
+
     people.push({
       id,
       name,
@@ -183,7 +201,11 @@ export function buildDataset(): Dataset {
       openToMove: rng.bool(role.level >= 5 ? 0.12 : 0.34),
       roleId: role.id,
       teamId: team.id,
-      locationId: rng.pick(LOCATIONS).id,
+      locationId: location.id,
+      roleTitle: role.title,
+      teamName: team.name,
+      departmentName: department?.name ?? '',
+      locationLabel: `${location.city}, ${location.country}`,
     });
 
     // --- skills for this person --------------------------------------------
@@ -264,6 +286,8 @@ export function buildDataset(): Dataset {
   // projects are staffed imperfectly, exactly as they are in real life.
   const workedOn: WorkedOnRow[] = [];
   const projectMembers = new Map<string, string[]>();
+  /** Every project fit per person, used to sweep up anyone left unstaffed. */
+  const fitsByPerson = new Map<string, Array<{ projectId: string; score: number }>>();
 
   for (const project of PROJECTS) {
     const scored = people
@@ -278,6 +302,12 @@ export function buildDataset(): Dataset {
         return { person, score: score + rng.float(0, 1.1) };
       })
       .sort((a, b) => b.score - a.score);
+
+    // Record every fit, before the pools are narrowed.
+    for (const entry of scored) {
+      if (!fitsByPerson.has(entry.person.id)) fitsByPerson.set(entry.person.id, []);
+      fitsByPerson.get(entry.person.id)!.push({ projectId: project.id, score: entry.score });
+    }
 
     const headcount = rng.int(5, 12);
     const chosen: string[] = [];
@@ -310,6 +340,46 @@ export function buildDataset(): Dataset {
       });
     }
     projectMembers.set(project.id, chosen);
+  }
+
+  // Sampling leaves a tail of people on nothing at all, which is both
+  // unrealistic — real organisations staff everybody onto something — and
+  // corrosive to the graph: an unstaffed person has no collaborators, so they
+  // sink to the bottom of every proximity ranking.
+  //
+  // Deliberately *not* their best-fitting project. Putting everyone exactly
+  // where they fit best empties the "suggested additions" and "hidden experts"
+  // panels, because the strongest candidate for a project ends up already on
+  // it. Nobody in a real company is on their globally optimal project either.
+  // Assigning from the second-to-eighth best fit keeps them plausibly staffed,
+  // gives them collaborators, and leaves them discoverable as a candidate for
+  // the project they would actually suit best.
+  const staffed = new Set(workedOn.map((row) => row.personId));
+  for (const person of people) {
+    if (staffed.has(person.id)) continue;
+
+    const fits = (fitsByPerson.get(person.id) ?? []).sort((a, b) => b.score - a.score);
+    const band = fits.slice(1, 8);
+    const choice = band.length > 0 ? rng.pick(band) : fits[0];
+    if (!choice) continue;
+
+    const projectRow = projects.find((p) => p.id === choice.projectId);
+    if (!projectRow) continue;
+
+    workedOn.push({
+      personId: person.id,
+      projectId: choice.projectId,
+      contribution: rng.pick(CONTRIBUTIONS),
+      allocationPct: rng.weighted([
+        [20, 0.35],
+        [40, 0.35],
+        [60, 0.3],
+      ]),
+      from: projectRow.startedAt,
+      to: projectRow.endedAt,
+    });
+    projectMembers.get(choice.projectId)?.push(person.id);
+    staffed.add(person.id);
   }
 
   // --- reporting lines ------------------------------------------------------

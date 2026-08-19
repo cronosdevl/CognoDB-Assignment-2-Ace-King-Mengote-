@@ -58,14 +58,18 @@ export const DEPARTURE_IMPACT = defineQuery(
   MATCH (p:Person {id: $personId})-[:WORKED_ON]->(pr:Project)
   WHERE pr.status IN ['active', 'planned']
 
-  WITH p, pr,
-       [(pr)-[req:REQUIRES]->(s:Skill)
-        WHERE size([(p)-[ph:HAS_SKILL]->(s2:Skill) WHERE s2.id = s.id AND ph.level >= req.minLevel | s2]) > 0
-          AND size([(pr)<-[:WORKED_ON]-(o:Person)-[oh:HAS_SKILL]->(s3:Skill)
-                    WHERE s3.id = s.id AND o.id <> p.id AND oh.level >= req.minLevel | o]) = 0
-        | {skillId: s.id, name: s.name, minLevel: req.minLevel}] AS orphanedSkills
+  // Only requirements this person actually satisfies can be orphaned by them.
+  MATCH (pr)-[req:REQUIRES]->(s:Skill)
+  MATCH (p)-[ph:HAS_SKILL]->(s)
+  WHERE ph.level >= req.minLevel
 
-  WHERE size(orphanedSkills) > 0
+  // …and only if nobody else on the same project also meets the bar.
+  OPTIONAL MATCH (pr)<-[:WORKED_ON]-(other:Person)-[oh:HAS_SKILL]->(s)
+    WHERE other.id <> p.id AND oh.level >= req.minLevel
+  WITH pr, s, req, count(DISTINCT other) AS otherCover
+  WHERE otherCover = 0
+
+  WITH pr, collect({skillId: s.id, name: s.name, minLevel: req.minLevel}) AS orphanedSkills
 
   RETURN
     pr.id AS projectId,
@@ -155,13 +159,17 @@ export const ACTIVE_PROJECT_COVERAGE = defineQuery(
   `
   MATCH (pr:Project)
   WHERE pr.status = 'active'
-  WITH pr, [(pr)-[req:REQUIRES]->(s:Skill) |
-         CASE WHEN size([(pr)<-[:WORKED_ON]-(m:Person)-[hs:HAS_SKILL]->(s)
-                         WHERE hs.level >= req.minLevel | m]) > 0 THEN 1 ELSE 0 END] AS covers
+  OPTIONAL MATCH (pr)-[req:REQUIRES]->(s:Skill)
+  OPTIONAL MATCH (pr)<-[:WORKED_ON]-(m:Person)-[hs:HAS_SKILL]->(s)
+    WHERE hs.level >= req.minLevel
+  WITH pr, s, count(DISTINCT m) AS coverCount
+  WITH pr,
+       count(s) AS requiredSkillCount,
+       sum(CASE WHEN coverCount > 0 THEN 1 ELSE 0 END) AS coveredCount
   RETURN
     count(pr) AS activeProjects,
-    avg(CASE WHEN size(covers) = 0 THEN 1.0
-             ELSE toFloat(reduce(total = 0, c IN covers | total + c)) / size(covers) END) AS averageProjectCoverage
+    avg(CASE WHEN requiredSkillCount = 0 THEN 1.0
+             ELSE toFloat(coveredCount) / requiredSkillCount END) AS averageProjectCoverage
   `,
 );
 

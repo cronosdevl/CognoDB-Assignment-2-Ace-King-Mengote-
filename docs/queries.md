@@ -256,3 +256,15 @@ Two structural guarantees back this up:
 Request input is additionally validated by zod schemas in
 `middleware/validate.ts` before it becomes a parameter, so `limit` is bounded
 and ids must match a slug pattern.
+
+---
+
+## A note on the query style
+
+Existence tests throughout are written as `size([pattern WHERE …]) > 0` rather
+than the more natural pattern predicate, and anti-joins as `size([…]) = 0`
+rather than `NOT (…)` or `NOT EXISTS { … }`. That is not stylistic: CognoDB
+0.9.x evaluates those idiomatic forms while ignoring the node property
+constraint, which returns a plausible wrong answer instead of an error. The
+evidence and the full list of what does and does not work is in
+[`cognodb-compatibility.md`](cognodb-compatibility.md).

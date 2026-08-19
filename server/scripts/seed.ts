@@ -17,6 +17,7 @@ import {
   COUNT_NODES,
   DELETE_BATCH,
   INDEXES,
+  REFRESH_ROLE_HOLDERS,
   UPSERT_CERTIFICATIONS,
   UPSERT_CERTIFIES,
   UPSERT_DEPARTMENTS,
@@ -106,6 +107,10 @@ async function loadDataset(dataset: Dataset): Promise<void> {
   await writeInBatches('reporting lines', UPSERT_REPORTS_TO, dataset.reportsTo);
   await writeInBatches('mentorship', UPSERT_MENTORS, dataset.mentors);
   await writeInBatches('certifications earned', UPSERT_EARNED, dataset.earned);
+
+  // Derived caches, once every edge they summarise exists.
+  await writeVoid(REFRESH_ROLE_HOLDERS, {});
+  logger.info('  role holder counts refreshed');
 }
 
 async function main(): Promise<void> {

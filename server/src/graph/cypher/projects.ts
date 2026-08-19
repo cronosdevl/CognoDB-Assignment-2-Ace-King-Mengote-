@@ -11,17 +11,24 @@ export const LIST_PROJECTS = defineQuery(
   `
   MATCH (pr:Project)
   WHERE ${PROJECT_FILTER}
-  WITH pr,
-       size([(pr)<-[:WORKED_ON]-(p:Person) | p]) AS headcount,
-       [(pr)-[req:REQUIRES]->(s:Skill) | {
-         skillId: s.id,
-         minLevel: req.minLevel,
-         covered: size([(pr)<-[:WORKED_ON]-(m:Person)-[hs:HAS_SKILL]->(s) WHERE hs.level >= req.minLevel | m]) > 0
-       }] AS requirements
-  WITH pr, headcount, requirements,
-       size([x IN requirements WHERE x.covered]) AS coveredCount
+  WITH pr
   ORDER BY pr.status ASC, pr.name ASC
   SKIP $offset LIMIT $limit
+
+  // Headcount first, on its own, so it is not multiplied by the requirement rows.
+  OPTIONAL MATCH (pr)<-[:WORKED_ON]-(member:Person)
+  WITH pr, count(DISTINCT member) AS headcount
+
+  // One row per requirement, carrying how many staffed people satisfy it.
+  OPTIONAL MATCH (pr)-[req:REQUIRES]->(s:Skill)
+  OPTIONAL MATCH (pr)<-[:WORKED_ON]-(m:Person)-[hs:HAS_SKILL]->(s)
+    WHERE hs.level >= req.minLevel
+  WITH pr, headcount, s, count(DISTINCT m) AS coverCount
+
+  WITH pr, headcount,
+       count(s) AS requiredSkillCount,
+       sum(CASE WHEN coverCount > 0 THEN 1 ELSE 0 END) AS coveredCount
+
   RETURN {
     id: pr.id,
     name: pr.name,
@@ -32,10 +39,11 @@ export const LIST_PROJECTS = defineQuery(
     startedAt: pr.startedAt,
     endedAt: pr.endedAt,
     headcount: headcount,
-    requiredSkillCount: size(requirements),
-    coverage: CASE WHEN size(requirements) = 0 THEN 1.0
-                   ELSE toFloat(coveredCount) / size(requirements) END
+    requiredSkillCount: requiredSkillCount,
+    coverage: CASE WHEN requiredSkillCount = 0 THEN 1.0
+                   ELSE toFloat(coveredCount) / requiredSkillCount END
   } AS project
+  ORDER BY project.status ASC, project.name ASC
   `,
 );
 
@@ -52,6 +60,12 @@ export const GET_PROJECT = defineQuery(
   'projects:detail',
   `
   MATCH (pr:Project {id: $id})
+  OPTIONAL MATCH (pr)<-[w:WORKED_ON]-(p:Person)
+  WITH pr, collect(CASE WHEN p IS NULL THEN null ELSE {
+    person: ${personSummary('p')},
+    contribution: w.contribution,
+    allocationPct: w.allocationPct
+  } END) AS team
   RETURN
     pr.id AS id,
     pr.name AS name,
@@ -61,19 +75,33 @@ export const GET_PROJECT = defineQuery(
     pr.businessUnit AS businessUnit,
     pr.startedAt AS startedAt,
     pr.endedAt AS endedAt,
-    [(pr)<-[w:WORKED_ON]-(p:Person) | {
-      person: ${personSummary('p')},
-      contribution: w.contribution,
-      allocationPct: w.allocationPct
-    }] AS team,
-    [(pr)-[req:REQUIRES]->(s:Skill) | {
-      skillId: s.id,
-      name: s.name,
-      category: s.category,
-      importance: req.importance,
-      minLevel: req.minLevel,
-      coveredBy: [(pr)<-[:WORKED_ON]-(m:Person)-[hs:HAS_SKILL]->(s) WHERE hs.level >= req.minLevel | ${personSummary('m')}]
-    }] AS requirements
+    team
+  `,
+);
+
+/**
+ * Requirements and who covers them, one row per required skill.
+ *
+ * Split out from the project detail query because the coverage list is a
+ * per-requirement aggregation; folding it into the same statement would either
+ * multiply the team rows by the requirement rows or need a comprehension inside
+ * a comprehension, which CognoDB does not evaluate.
+ */
+export const PROJECT_REQUIREMENTS = defineQuery(
+  'projects:requirements',
+  `
+  MATCH (pr:Project {id: $id})-[req:REQUIRES]->(s:Skill)
+  OPTIONAL MATCH (pr)<-[:WORKED_ON]-(m:Person)-[hs:HAS_SKILL]->(s)
+    WHERE hs.level >= req.minLevel
+  WITH s, req, collect(CASE WHEN m IS NULL THEN null ELSE ${personSummary('m')} END) AS coveredBy
+  RETURN
+    s.id AS skillId,
+    s.name AS name,
+    s.category AS category,
+    req.importance AS importance,
+    req.minLevel AS minLevel,
+    coveredBy
+  ORDER BY req.importance DESC, s.name ASC
   `,
 );
 
@@ -95,7 +123,10 @@ export const PROJECT_CANDIDATES = defineQuery(
   WITH pr, reqs, reduce(total = 0.0, r IN reqs | total + r.importance) AS maxScore
 
   MATCH (cand:Person)
-  WHERE NOT (cand)-[:WORKED_ON]->(pr)
+  // Anti-join written as an empty comprehension: NOT (cand)-[:WORKED_ON]->(pr),
+  // NOT EXISTS { … } and OPTIONAL MATCH + IS NULL all evaluate to "has no
+  // WORKED_ON edge at all" on CognoDB 0.9.x, which excludes everybody.
+  WHERE size([(cand)-[:WORKED_ON]->(onIt:Project) WHERE onIt.id = $id | onIt]) = 0
 
   WITH pr, reqs, maxScore, cand,
        [r IN reqs WHERE
@@ -119,6 +150,9 @@ export const PROJECT_CANDIDATES = defineQuery(
        CASE WHEN maxScore = 0 THEN 0.0 ELSE rawScore / maxScore END AS fit
   WHERE fit > 0.15
 
+  // Separate WITH: inside one clause Cypher expects ORDER BY before WHERE, so
+  // filtering and then ranking has to be two steps.
+  WITH cand, reqs, directIds, adjacentIds, directLinks, fit
   ORDER BY fit DESC, directLinks DESC, cand.name ASC
   LIMIT $limit
 
@@ -160,7 +194,8 @@ export const HIDDEN_EXPERTS = defineQuery(
   `
   MATCH (pr:Project {id: $id})-[req:REQUIRES]->(s:Skill)
   MATCH (cand:Person)-[hs:HAS_SKILL]->(s)
-  WHERE hs.level >= req.minLevel AND NOT (cand)-[:WORKED_ON]->(pr)
+  WHERE hs.level >= req.minLevel
+    AND size([(cand)-[:WORKED_ON]->(onIt:Project) WHERE onIt.id = $id | onIt]) = 0
 
   WITH pr, cand,
        collect({skillId: s.id, name: s.name, level: hs.level}) AS matchedSkills,
@@ -178,6 +213,9 @@ export const HIDDEN_EXPERTS = defineQuery(
        END AS distance
 
   WHERE size(matchedSkills) >= $minMatches
+
+  // As above: filter, then rank in a fresh WITH.
+  WITH pr, cand, matchedSkills, rawScore, firstDegree, distance
   ORDER BY distance ASC, rawScore DESC, cand.name ASC
   LIMIT $limit
 

@@ -179,7 +179,15 @@ export const UPSERT_PEOPLE = defineQuery(
       p.joinedAt = row.joinedAt,
       p.tenureMonths = row.tenureMonths,
       p.avatarHue = row.avatarHue,
-      p.openToMove = row.openToMove
+      p.openToMove = row.openToMove,
+      // Denormalised for read paths — the edges created below stay authoritative.
+      p.roleId = row.roleId,
+      p.roleTitle = row.roleTitle,
+      p.teamId = row.teamId,
+      p.teamName = row.teamName,
+      p.departmentName = row.departmentName,
+      p.locationId = row.locationId,
+      p.locationLabel = row.locationLabel
   WITH p, row
   MATCH (r:Role {id: row.roleId})
   MERGE (p)-[:HOLDS_ROLE]->(r)
@@ -249,6 +257,23 @@ export const UPSERT_EARNED = defineQuery(
   MATCH (c:Certification {id: row.certificationId})
   MERGE (p)-[rel:EARNED]->(c)
   SET rel.earnedOn = row.earnedOn
+  `,
+);
+
+/**
+ * Cache the holder count on each Role.
+ *
+ * Same reasoning as the denormalised person fields: a role summary is often
+ * built from inside a comprehension, where a second traversal is not available.
+ * Run once at the end of the seed, after every HOLDS_ROLE edge exists.
+ */
+export const REFRESH_ROLE_HOLDERS = defineQuery(
+  'seed:role-holders',
+  `
+  MATCH (r:Role)
+  OPTIONAL MATCH (r)<-[:HOLDS_ROLE]-(p:Person)
+  WITH r, count(p) AS holders
+  SET r.holders = holders
   `,
 );
 

@@ -18,6 +18,7 @@ Friday.
 - [What it does](#what-it-does)
 - [Screenshots](#screenshots)
 - [Data model](#data-model)
+- [CognoDB compatibility](docs/cognodb-compatibility.md)
 - [Getting started](#getting-started)
 - [Project structure](#project-structure)
 - [The queries](#the-queries)
@@ -341,6 +342,25 @@ verdict in the body, so the client can tell "the database is down" apart from
 malformed statement (our bug, surfaced loudly in development). The UI shows one
 banner explaining the outage with a retry, rather than seven identical red boxes.
 Transient failures are retried with backoff before they ever reach the user.
+
+**Building against a pre-1.0 engine.** CognoDB v0.9.11 speaks openCypher and
+works with the Neo4j driver, but three Neo4j-flavoured constructs behave
+differently — and one of them fails *silently*. A pattern predicate in `WHERE`
+ignores its inline property constraint, so `WHERE (p)-[:HAS_SKILL]->(:Skill {id:
+$id})` matched all 184 people instead of the correct 18. No error; just a wrong
+answer that had quietly broken the skill filters. Negation and `OPTIONAL MATCH`
+anti-joins are wrong in the same direction, and pattern comprehensions cannot
+nest inside one another.
+
+Every existence test in this codebase is therefore written as
+`size([pattern WHERE …]) > 0`, and the display fields a person card needs are
+denormalised onto the node so projections never need a nested traversal. The
+findings, the probes that established them and the workarounds are written up in
+[`docs/cognodb-compatibility.md`](docs/cognodb-compatibility.md). `npm run verify`
+exists partly to catch exactly this class of problem: it asserts across *all*
+active projects that the candidate and hidden-expert panels are non-empty,
+because a silently-wrong query shows up as a plausible-looking empty list rather
+than a stack trace.
 
 **Deterministic seed data.** A `mulberry32` PRNG means the same graph on every
 machine, so the numbers in this README and the screenshots stay true. Structure

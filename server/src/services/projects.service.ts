@@ -16,8 +16,9 @@ import {
   HIDDEN_EXPERTS,
   LIST_PROJECTS,
   PROJECT_CANDIDATES,
+  PROJECT_REQUIREMENTS,
 } from '../graph/cypher/projects.js';
-import { field, listField, optionalField, round, toNumber } from '../graph/mappers.js';
+import { field, listField, optionalField, round, toNumber, uniqueBy } from '../graph/mappers.js';
 
 export interface ListProjectsOptions {
   q: string | null;
@@ -57,7 +58,7 @@ interface RawRequirement {
 }
 
 export async function getProject(id: string): Promise<ProjectDetail> {
-  const [core, candidates] = await Promise.all([
+  const [core, rawRequirements, candidates] = await Promise.all([
     readOne(GET_PROJECT, { id }, (record) => ({
       id: field<string>(record, 'id'),
       name: field<string>(record, 'name'),
@@ -67,20 +68,35 @@ export async function getProject(id: string): Promise<ProjectDetail> {
       businessUnit: field<string>(record, 'businessUnit'),
       startedAt: field<string>(record, 'startedAt'),
       endedAt: optionalField<string>(record, 'endedAt'),
-      team: listField<{ person: PersonSummary; contribution: string; allocationPct: number }>(record, 'team'),
-      requirements: listField<RawRequirement>(record, 'requirements'),
+      team: listField<{ person: PersonSummary; contribution: string; allocationPct: number } | null>(
+        record,
+        'team',
+      ).filter((entry): entry is { person: PersonSummary; contribution: string; allocationPct: number } =>
+        Boolean(entry?.person),
+      ),
+    })),
+    read(PROJECT_REQUIREMENTS, { id }, (record) => ({
+      skillId: field<string>(record, 'skillId'),
+      name: field<string>(record, 'name'),
+      category: field<RawRequirement['category']>(record, 'category'),
+      importance: toNumber(record.get('importance')),
+      minLevel: toNumber(record.get('minLevel')) as RawRequirement['minLevel'],
+      // `collect(CASE … null …)` keeps a null placeholder when no row matched,
+      // depending on the engine — drop them rather than trusting either way.
+      coveredBy: listField<PersonSummary | null>(record, 'coveredBy').filter(
+        (person): person is PersonSummary => person !== null,
+      ),
     })),
     listCandidates(id, 8),
   ]);
 
   if (!core) throw AppError.notFound('Project', id);
 
-  const requirements: ProjectSkillRequirement[] = core.requirements
+  const requirements: ProjectSkillRequirement[] = rawRequirements
     .map((requirement) => ({
       ...requirement,
-      // Deduplicate: a person on the project twice over would otherwise appear
-      // twice in the coverage list.
-      coveredBy: requirement.coveredBy,
+      // The same person can satisfy a requirement via more than one matched row.
+      coveredBy: uniqueBy(requirement.coveredBy, (person) => person.id),
       covered: requirement.coveredBy.length > 0,
     }))
     .sort((a, b) => b.importance - a.importance || a.name.localeCompare(b.name));
