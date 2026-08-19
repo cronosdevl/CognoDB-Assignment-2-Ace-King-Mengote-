@@ -167,9 +167,10 @@ for multi-hop traversals to be interesting, small enough for the free
 
 1. Sign up at [console.cognodb.com/signup](https://console.cognodb.com/signup).
 2. Create a free (`c0`) instance and pick a region — it provisions in under a minute.
-3. Copy the connection URI (`bolt+s://<instance-id>.databases.cognodb.cloud`) and
-   the generated password for the `cognodb` user. **The password is shown exactly
-   once** — save it before closing the dialog.
+3. From the instance's **Connect** tab, copy the connection URI
+   (`bolt+s://<instance-id>.<region>.databases.cognodb.com:7687`) and the generated
+   password for the `cognodb` user. **The password is shown exactly once** — save it
+   before closing the dialog.
 
 ### 2 · Configure
 
@@ -182,7 +183,7 @@ cp .env.example .env
 Fill in `.env`:
 
 ```dotenv
-COGNODB_URI=bolt+s://<instance-id>.databases.cognodb.cloud
+COGNODB_URI=bolt+s://<instance-id>.<region>.databases.cognodb.com:7687
 COGNODB_USER=cognodb
 COGNODB_PASSWORD=<your password>
 COGNODB_DATABASE=neo4j
