@@ -10,11 +10,6 @@ const SIZES = {
   xl: 'size-20 text-2xl',
 } as const;
 
-/**
- * Initials on a gradient derived from the hue stored on the person node — no
- * image hosting, no broken avatars, and the same person is always the same
- * colour across every screen.
- */
 export function Avatar({
   name,
   hue,
@@ -45,7 +40,6 @@ export function Avatar({
   );
 }
 
-/** Overlapping avatars for "and N others" contexts. */
 export function AvatarStack({
   people,
   max = 5,

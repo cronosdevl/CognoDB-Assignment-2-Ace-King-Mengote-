@@ -13,10 +13,6 @@ const COLOURS: Record<Level, string> = {
 };
 const RESET = '[0m';
 
-/**
- * Deliberately tiny: structured JSON in production so a hosting platform can
- * index it, human-readable colour in development. Not worth a dependency.
- */
 function emit(level: Level, message: string, context?: Record<string, unknown>): void {
   if (LEVEL_ORDER[level] < MIN_LEVEL) return;
 

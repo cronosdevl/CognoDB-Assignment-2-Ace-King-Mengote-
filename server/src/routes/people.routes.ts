@@ -22,9 +22,6 @@ peopleRouter.get(
   }),
 );
 
-/**
- * Registered before `/:id` so "connection" is not swallowed as a person id.
- */
 peopleRouter.get(
   '/connection',
   asyncHandler(async (request, response) => {

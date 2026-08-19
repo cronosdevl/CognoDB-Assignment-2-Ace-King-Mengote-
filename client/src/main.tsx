@@ -14,8 +14,6 @@ const queryClient = new QueryClient({
       staleTime: 60_000,
       refetchOnWindowFocus: false,
       retry(failureCount, error) {
-        // A 404 or a validation failure will not fix itself; a flaky
-        // connection to a free-tier instance sometimes will.
         if (error instanceof ApiError && error.status >= 400 && error.status < 500) return false;
         return failureCount < 2;
       },

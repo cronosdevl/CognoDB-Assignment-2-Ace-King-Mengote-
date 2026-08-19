@@ -1,11 +1,6 @@
 import type { Record as Neo4jRecord } from 'neo4j-driver';
 import { isInt } from 'neo4j-driver';
 
-/**
- * The driver is configured with `disableLosslessIntegers`, so integers already
- * arrive as JS numbers. These helpers exist for the edges of that guarantee —
- * aggregates that come back as `Integer`, and nulls from OPTIONAL MATCH.
- */
 export function toNumber(value: unknown, fallback = 0): number {
   if (value === null || value === undefined) return fallback;
   if (typeof value === 'number') return Number.isFinite(value) ? value : fallback;

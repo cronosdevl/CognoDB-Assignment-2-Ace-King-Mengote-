@@ -1,8 +1,3 @@
-/**
- * Application-level error with an HTTP status and a stable machine-readable
- * code. Everything the API returns to the client funnels through this type so
- * the frontend can branch on `code` rather than parsing prose.
- */
 export class AppError extends Error {
   readonly status: number;
   readonly code: string;
@@ -47,13 +42,6 @@ function driverErrorOf(error: unknown): DriverError {
   return (typeof error === 'object' && error !== null ? error : {}) as DriverError;
 }
 
-/**
- * Map a driver failure onto something the UI can act on.
- *
- * The distinction that matters to a user is "the database is unreachable /
- * misconfigured" (show a full-page connection banner, offer retry) versus "this
- * particular query was wrong" (a bug — surface it loudly in development).
- */
 export function toAppError(error: unknown, context: string): AppError {
   if (error instanceof AppError) return error;
 
@@ -62,7 +50,6 @@ export function toAppError(error: unknown, context: string): AppError {
   const message = err.message ?? String(error);
   const kind = err.constructor?.name ?? err.name ?? 'Error';
 
-  // Wrong credentials — the single most common first-run mistake.
   if (code === 'Neo.ClientError.Security.Unauthorized') {
     return AppError.database(
       'CognoDB rejected the credentials. Check COGNODB_USER and COGNODB_PASSWORD in your .env.',
@@ -87,7 +74,6 @@ export function toAppError(error: unknown, context: string): AppError {
     );
   }
 
-  // Connectivity: DNS failure, TLS problem, instance asleep or still provisioning.
   if (
     kind === 'ServiceUnavailableError' ||
     kind === 'SessionExpiredError' ||
@@ -130,7 +116,6 @@ export function toAppError(error: unknown, context: string): AppError {
   );
 }
 
-/** True when retrying the same query has a reasonable chance of succeeding. */
 export function isRetryable(error: unknown): boolean {
   const err = driverErrorOf(error);
   const code = err.code ?? '';

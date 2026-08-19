@@ -5,15 +5,14 @@ import { ApiError } from '@/api/client';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/cn';
 
-// ---------------------------------------------------------------------------
+
 // Loading
-// ---------------------------------------------------------------------------
+
 
 export function Skeleton({ className }: { className?: string }) {
   return <div className={cn('skeleton rounded-md', className)} aria-hidden />;
 }
 
-/** Placeholder that matches the shape of a list of cards. */
 export function SkeletonList({ rows = 5, className }: { rows?: number; className?: string }) {
   return (
     <div className={cn('space-y-3', className)} role="status" aria-label="Loading">
@@ -52,9 +51,9 @@ export function SkeletonCards({ count = 6, className }: { count?: number; classN
   );
 }
 
-// ---------------------------------------------------------------------------
+
 // Empty
-// ---------------------------------------------------------------------------
+
 
 export function EmptyState({
   icon,
@@ -105,15 +104,9 @@ export function NoResults({ query, onReset }: { query?: string; onReset?: () => 
   );
 }
 
-// ---------------------------------------------------------------------------
-// Error
-// ---------------------------------------------------------------------------
 
-/**
- * A database outage is not the user's fault and not something they can fix by
- * retrying a form, so it gets its own explanation and a retry button rather
- * than a generic red box.
- */
+// Error
+
 export function ErrorState({
   error,
   onRetry,

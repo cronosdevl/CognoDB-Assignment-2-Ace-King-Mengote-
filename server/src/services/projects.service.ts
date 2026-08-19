@@ -43,8 +43,6 @@ export async function listProjects(options: ListProjectsOptions): Promise<Pagina
     read(COUNT_PROJECTS, params, (record) => toNumber(record.get('total'))),
   ]);
 
-  // Coverage is a second query over just this page of projects — see the note
-  // on PROJECT_COVERAGE for why it cannot ride along with the listing.
   const coverage = await read(
     PROJECT_COVERAGE,
     { projectIds: rows.map((project) => project.id) },
@@ -58,7 +56,6 @@ export async function listProjects(options: ListProjectsOptions): Promise<Pagina
 
   const items = rows.map((project) => {
     const entry = byProject.get(project.id);
-    // A project with no requirements is vacuously fully covered.
     const ratio = !entry || entry.requiredSkillCount === 0 ? 1 : entry.coveredCount / entry.requiredSkillCount;
     return { ...project, coverage: round(ratio, 3) };
   });
@@ -99,8 +96,6 @@ export async function getProject(id: string): Promise<ProjectDetail> {
       category: field<RawRequirement['category']>(record, 'category'),
       importance: toNumber(record.get('importance')),
       minLevel: toNumber(record.get('minLevel')) as RawRequirement['minLevel'],
-      // `collect(CASE … null …)` keeps a null placeholder when no row matched,
-      // depending on the engine — drop them rather than trusting either way.
       coveredBy: listField<PersonSummary | null>(record, 'coveredBy').filter(
         (person): person is PersonSummary => person !== null,
       ),
@@ -113,7 +108,6 @@ export async function getProject(id: string): Promise<ProjectDetail> {
   const requirements: ProjectSkillRequirement[] = rawRequirements
     .map((requirement) => ({
       ...requirement,
-      // The same person can satisfy a requirement via more than one matched row.
       coveredBy: uniqueBy(requirement.coveredBy, (person) => person.id),
       covered: requirement.coveredBy.length > 0,
     }))

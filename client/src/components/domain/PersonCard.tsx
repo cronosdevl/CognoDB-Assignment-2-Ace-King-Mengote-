@@ -7,11 +7,6 @@ import { Avatar } from '@/components/domain/Avatar';
 import { Badge } from '@/components/ui/Badge';
 import { cn } from '@/lib/cn';
 
-/**
- * A person as a row in a list. Used by the directory, project teams, mentor
- * suggestions and search results, so it takes a `trailing` slot rather than
- * growing a prop per caller.
- */
 export function PersonRow({
   person,
   trailing,
@@ -43,7 +38,6 @@ export function PersonRow({
   );
 }
 
-/** A person as a card in a grid — the directory's primary presentation. */
 export function PersonCard({ person }: { person: PersonSummary }) {
   return (
     <Link

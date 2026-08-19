@@ -60,7 +60,6 @@ export function Select({ label, className, children, ...rest }: SelectProps) {
         className={cn(
           FIELD,
           'cursor-pointer appearance-none bg-[length:16px] bg-[right_0.6rem_center] bg-no-repeat px-3 pr-9',
-          // Inline chevron so no icon font or extra element is needed.
           "bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23888%22 stroke-width=%222%22 stroke-linecap=%22round%22><path d=%22M6 9l6 6 6-6%22/></svg>')]",
         )}
         {...rest}
@@ -71,7 +70,6 @@ export function Select({ label, className, children, ...rest }: SelectProps) {
   );
 }
 
-/** Segmented control for small, mutually exclusive choices. */
 export function SegmentedControl<T extends string>({
   value,
   options,

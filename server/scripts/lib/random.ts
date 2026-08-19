@@ -1,11 +1,3 @@
-/**
- * A small deterministic PRNG so `npm run seed` produces the same graph on every
- * machine. Reproducibility matters here: the README quotes concrete numbers and
- * the screenshots show specific people, so the dataset cannot drift between
- * runs.
- *
- * mulberry32 — fast, tiny, good enough for generating plausible test data.
- */
 export class Rng {
   private state: number;
 

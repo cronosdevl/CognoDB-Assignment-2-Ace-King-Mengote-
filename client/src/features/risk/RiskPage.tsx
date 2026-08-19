@@ -30,9 +30,6 @@ export function RiskPage() {
       setPerson(linkedPerson);
       return;
     }
-    // Default to the person behind the most severe single point of failure —
-    // the departure the organisation should most want to understand, and the
-    // one that makes the simulator explain itself on arrival.
     if (!personIdParam && spof?.[0]) setPerson(spof[0].expert);
   }, [linkedPerson, person, personIdParam, spof]);
   const { data: impact, isPending: impactPending } = useDepartureImpact(person?.id);

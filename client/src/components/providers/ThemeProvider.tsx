@@ -13,18 +13,9 @@ const STORAGE_KEY = 'wayfinder-theme';
 
 function initialTheme(): Theme {
   if (typeof document === 'undefined') return 'light';
-  // index.html already resolved stored preference vs. system and applied the
-  // class before first paint; read it back rather than deciding again.
   return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
 }
 
-/**
- * Theme lives in one context because several components colour themselves in
- * JavaScript — the generated category hues and the SVG graph cannot be
- * expressed as static Tailwind classes, so they need to know which palette is
- * active. A per-component hook would let those drift out of sync with the
- * toggle in the header.
- */
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(initialTheme);
 
@@ -34,7 +25,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     try {
       localStorage.setItem(STORAGE_KEY, theme);
     } catch {
-      /* private browsing — the choice just will not persist */
     }
   }, [theme]);
 

@@ -10,13 +10,6 @@ import { projectsRouter } from './projects.routes.js';
 import { skillsRouter } from './skills.routes.js';
 
 export const apiRouter: Router = Router();
-
-/**
- * Always 200, even when the database is down — the body carries the verdict.
- * The client polls this to decide whether to show the "cannot reach CognoDB"
- * banner, and a non-200 would make that check indistinguishable from the API
- * itself being unreachable.
- */
 apiRouter.get(
   '/health',
   asyncHandler(async (_request, response) => {

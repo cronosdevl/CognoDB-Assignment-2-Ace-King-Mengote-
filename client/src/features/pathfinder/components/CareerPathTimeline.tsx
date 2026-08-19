@@ -9,14 +9,6 @@ import { LevelPips, Meter } from '@/components/ui/data';
 import { hueStyles, ratioHue } from '@/lib/color';
 import { categoryHue, formatDuration, percent, plural } from '@/lib/format';
 
-/**
- * The route, drawn as a vertical timeline.
- *
- * Each step is one hop along `PROGRESSES_TO`; under it sit the requirements the
- * person does not yet meet, and for each of those the two things that turn a
- * gap into a plan — an adjacent skill they already have, and a named colleague
- * who could teach it.
- */
 export function CareerPathTimeline({ path }: { path: CareerPath }) {
   const { isDark } = useTheme();
 

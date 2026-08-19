@@ -1,11 +1,6 @@
 import { defineQuery } from '../../db/query.js';
 import { coverCount, PROJECT_FILTER, personSummary } from './fragments.js';
 
-/**
- * Directory listing. `coverage` is computed in the query rather than the
- * service so sorting and the summary card agree: it is the share of a project's
- * requirements that at least one staffed person already meets.
- */
 export const LIST_PROJECTS = defineQuery(
   'projects:list',
   `
@@ -30,14 +25,6 @@ export const LIST_PROJECTS = defineQuery(
   `,
 );
 
-/**
- * Per-project requirement coverage for a set of projects.
- *
- * Separate from the listing because coverage is a per-requirement aggregation,
- * and folding it in would need either a comprehension nested inside another
- * (which CognoDB cannot evaluate) or an OPTIONAL MATCH with both ends bound
- * (which it evaluates incorrectly). The service merges the two results.
- */
 export const PROJECT_COVERAGE = defineQuery(
   'projects:coverage',
   `
@@ -82,14 +69,6 @@ export const GET_PROJECT = defineQuery(
   `,
 );
 
-/**
- * Requirements and who covers them, one row per required skill.
- *
- * Split out from the project detail query because the coverage list is a
- * per-requirement aggregation; folding it into the same statement would either
- * multiply the team rows by the requirement rows or need a comprehension inside
- * a comprehension, which CognoDB does not evaluate.
- */
 export const PROJECT_REQUIREMENTS = defineQuery(
   'projects:requirements',
   `
@@ -106,16 +85,6 @@ export const PROJECT_REQUIREMENTS = defineQuery(
   `,
 );
 
-/**
- * Suggest people who could join a project.
- *
- * The interesting half is the last clause. A candidate who has never touched
- * the project may still be one collaboration hop away — they have shipped
- * something with somebody who is already staffed on it. That "who knows
- * somebody who knows the work" signal is a four-hop pattern
- * (candidate → project → colleague → project) and it is what separates a useful
- * suggestion from a keyword match on a skills table.
- */
 export const PROJECT_CANDIDATES = defineQuery(
   'projects:candidates',
   `
@@ -181,15 +150,6 @@ export const PROJECT_CANDIDATES = defineQuery(
   `,
 );
 
-/**
- * Hidden experts: people who are qualified for a project's requirements but are
- * not on it, ranked by how socially close they already are to the team.
- *
- * Distance 1 means they have shipped with somebody on the project; distance 2
- * means a friend-of-a-friend. Everything else is distance 3+, which in practice
- * means "nobody on this project has ever heard of them" — the people an org
- * chart would never surface.
- */
 export const HIDDEN_EXPERTS = defineQuery(
   'projects:hidden-experts',
   `

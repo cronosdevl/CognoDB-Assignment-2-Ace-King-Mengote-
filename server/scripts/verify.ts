@@ -1,10 +1,3 @@
-/**
- * Run every headline query against the live instance and print what came back.
- *
- * This is the script to run after seeding: it proves the graph is populated,
- * that each traversal returns something sensible, and it doubles as a quick
- * demo of the queries described in the README.
- */
 import { checkHealth, closeDriver } from '../src/db/driver.js';
 import { logger } from '../src/lib/logger.js';
 import { getCounts, getDepartureImpact, getOverview, listSinglePointsOfFailure } from '../src/services/insights.service.js';
@@ -155,10 +148,6 @@ async function main(): Promise<void> {
     }
   }
 
-  // A single project can legitimately have no gaps and no candidates. Across
-  // every active project, though, empty panels mean the seed data is too
-  // neatly staffed for these features to demonstrate anything — so check the
-  // whole set rather than trusting one sample.
   if (projects && projects.items.length > 0) {
     heading('Feature coverage across active projects');
     const details = await Promise.all(projects.items.map((project) => getProject(project.id)));

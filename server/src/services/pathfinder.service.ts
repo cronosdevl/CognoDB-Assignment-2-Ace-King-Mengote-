@@ -60,16 +60,6 @@ interface RawGap {
   mentor: { person: PersonSummary; level: number; collaborationDistance: number | null } | null;
 }
 
-/**
- * The strongest adjacent skill the person actually holds.
- *
- * Ranked by similarity × proficiency: knowing a very close skill a little is
- * worth about as much as knowing a distant one well, and this is the number
- * that turns "you lack ETL" into "you know Spark at 4, so this is a short
- * climb". Resolved here rather than in Cypher because filtering the neighbour
- * list against the person's own skills inside the query would require a
- * comprehension nested in a comprehension.
- */
 function bestHeadStart(
   adjacent: RawGap['adjacent'],
   held: Map<string, number>,
@@ -94,21 +84,6 @@ function bestHeadStart(
   return best;
 }
 
-/**
- * Plan a route from where someone is to where they want to be.
- *
- * Three traversals, composed here rather than in one enormous statement so each
- * stays readable and independently testable:
- *
- *   1. the shortest route through the `PROGRESSES_TO` ladder;
- *   2. the skill gap at every role on that route, each with a head start and a
- *      suggested mentor;
- *   3. a weighted readiness score per step.
- *
- * Steps 2 and 3 run concurrently once the route is known, and both are driven
- * by the same `$roleIds` list, so the cost does not grow with the number of
- * roles in the ladder.
- */
 export async function planCareerPath(personId: string, targetRoleId: string): Promise<CareerPath> {
   const person = await getPersonSummary(personId);
   const targetRole = await getRoleSummary(targetRoleId);
@@ -183,8 +158,6 @@ export async function planCareerPath(personId: string, targetRoleId: string): Pr
   const heldSkills = new Map(ownSkills.map((entry) => [entry.skillId, entry.level]));
 
   const gapsByRole = new Map<string, SkillGapEntry[]>();
-  // Defensive: one gap per (role, skill) whatever the engine returns. A
-  // duplicate row here becomes a duplicate React key downstream.
   const seenGaps = new Set<string>();
   for (const raw of gaps) {
     const dedupeKey = `${raw.roleId}|${raw.skillId}`;
@@ -221,7 +194,6 @@ export async function planCareerPath(personId: string, targetRoleId: string): Pr
   }));
 
   const totalMonths = steps.reduce((sum, step) => sum + step.typicalMonths, 0);
-  // The route is only as achievable as its hardest step.
   const overallReadiness = steps.length === 0 ? 1 : Math.min(...steps.map((step) => step.readiness));
 
   return {

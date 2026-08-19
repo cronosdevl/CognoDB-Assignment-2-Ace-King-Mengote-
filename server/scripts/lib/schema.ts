@@ -1,10 +1,5 @@
 import { defineQuery } from '../../src/db/query.js';
 
-/**
- * Uniqueness constraints double as the lookup indexes every query relies on:
- * each one is backed by an index, so `MATCH (p:Person {id: $id})` is a point
- * lookup rather than a label scan.
- */
 export const CONSTRAINTS = [
   'CREATE CONSTRAINT person_id IF NOT EXISTS FOR (n:Person) REQUIRE n.id IS UNIQUE',
   'CREATE CONSTRAINT skill_id IF NOT EXISTS FOR (n:Skill) REQUIRE n.id IS UNIQUE',
@@ -25,10 +20,6 @@ export const INDEXES = [
   'CREATE INDEX skill_category IF NOT EXISTS FOR (n:Skill) ON (n.category)',
 ].map((text, index) => defineQuery(`index:${index}`, text));
 
-// ---------------------------------------------------------------------------
-// Batched writers. Each takes a `$rows` list and is called with slices of the
-// generated dataset so no single transaction has to hold the whole graph.
-// ---------------------------------------------------------------------------
 
 export const UPSERT_SKILLS = defineQuery(
   'seed:skills',
@@ -260,13 +251,6 @@ export const UPSERT_EARNED = defineQuery(
   `,
 );
 
-/**
- * Cache the holder count on each Role.
- *
- * Same reasoning as the denormalised person fields: a role summary is often
- * built from inside a comprehension, where a second traversal is not available.
- * Run once at the end of the seed, after every HOLDS_ROLE edge exists.
- */
 export const REFRESH_ROLE_HOLDERS = defineQuery(
   'seed:role-holders',
   `

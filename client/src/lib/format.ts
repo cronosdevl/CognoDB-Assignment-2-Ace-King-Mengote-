@@ -60,10 +60,6 @@ export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
   paused: 'Paused',
 };
 
-/**
- * A fixed hue per skill category, so the same competency is the same colour on
- * every screen. Values are OKLCH hue angles fed to the helpers in `color.ts`.
- */
 export const CATEGORY_HUES: Record<SkillCategory, number> = {
   Engineering: 258,
   'Data & AI': 300,

@@ -1,14 +1,6 @@
 import { defineQuery } from '../../db/query.js';
 import { coverCount, MENTOR_LEVEL, personSummary } from './fragments.js';
 
-/**
- * Single points of failure.
- *
- * A skill qualifies when it is required by at least one active project and
- * exactly one person in the company holds it at expert level. The query then
- * names the next-best person, so the answer is "here is the risk *and* here is
- * the cheapest way to remove it" rather than a bare warning.
- */
 export const SINGLE_POINTS_OF_FAILURE = defineQuery(
   'insights:spof',
   `
@@ -46,14 +38,6 @@ export const SINGLE_POINTS_OF_FAILURE = defineQuery(
   `,
 );
 
-/**
- * "What breaks if this person leaves?"
- *
- * For each of their live projects, find the requirements that *only* they
- * satisfy — the inner pattern comprehension counts everyone else on the same
- * project who also meets the minimum level, and keeps the requirement only when
- * that count is zero.
- */
 export const DEPARTURE_IMPACT = defineQuery(
   'insights:departure-impact',
   `
@@ -85,7 +69,6 @@ export const DEPARTURE_IMPACT = defineQuery(
   `,
 );
 
-/** Skills where this person is one of very few experts company-wide. */
 export const CRITICAL_SKILLS_FOR_PERSON = defineQuery(
   'insights:critical-skills',
   `
@@ -100,11 +83,6 @@ export const CRITICAL_SKILLS_FOR_PERSON = defineQuery(
   `,
 );
 
-/**
- * Who could step into this person's shoes: ranked by how much of their
- * expert-level skill set the candidate already covers, with a bonus for people
- * who have already worked alongside them.
- */
 export const REPLACEMENT_CANDIDATES = defineQuery(
   'insights:replacements',
   `
@@ -140,10 +118,6 @@ export const REPLACEMENT_CANDIDATES = defineQuery(
   `,
 );
 
-// ---------------------------------------------------------------------------
-// Dashboard
-// ---------------------------------------------------------------------------
-
 export const DATASET_COUNTS = defineQuery(
   'insights:counts',
   `
@@ -157,7 +131,6 @@ export const DATASET_COUNTS = defineQuery(
   `,
 );
 
-/** Active project count and the average share of their requirements covered. */
 export const ACTIVE_PROJECT_COVERAGE = defineQuery(
   'insights:coverage',
   `
@@ -184,7 +157,6 @@ export const OPEN_TO_MOVE_COUNT = defineQuery(
   `,
 );
 
-/** Demand (active projects requiring it) versus supply (people at level 4+). */
 export const SKILL_SUPPLY_DEMAND = defineQuery(
   'insights:supply-demand',
   `
@@ -212,10 +184,6 @@ export const DEPARTMENT_BREAKDOWN = defineQuery(
   `,
 );
 
-/**
- * The best-connected people, by distinct collaborators reached through shared
- * projects. A pure graph metric — there is no column anywhere that holds it.
- */
 export const MOST_CONNECTED = defineQuery(
   'insights:most-connected',
   `

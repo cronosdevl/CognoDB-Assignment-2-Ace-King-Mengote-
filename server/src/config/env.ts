@@ -7,13 +7,6 @@ import { z } from 'zod';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
-/**
- * The repo keeps a single `.env` at its root so the server and the seed
- * scripts read identical connection details. Walk upwards until we find one;
- * in a deployed environment there is usually no file at all and the platform
- * injects real environment variables instead — which is why a missing file is
- * not an error.
- */
 function loadDotEnv(): void {
   let dir = here;
   for (let i = 0; i < 6; i += 1) {
@@ -55,7 +48,6 @@ const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   CORS_ORIGIN: csv.default('http://localhost:5173'),
 
-  /** Upper bound applied to every user-supplied `limit` query parameter. */
   MAX_PAGE_SIZE: z.coerce.number().int().positive().max(500).default(100),
 });
 
@@ -69,8 +61,6 @@ function parseEnv(): Env {
       .map((issue) => `  • ${issue.path.join('.') || '(root)'}: ${issue.message}`)
       .join('\n');
 
-    // A missing connection string is a setup mistake, not a bug — print
-    // something a human can act on rather than a stack trace through zod.
     console.error(
       `\nWayfinder cannot start: the environment is not configured.\n\n${details}\n\n` +
         '  1. cp .env.example .env\n' +
@@ -88,7 +78,6 @@ export const env: Env = parseEnv();
 export const isProduction = env.NODE_ENV === 'production';
 export const isDevelopment = env.NODE_ENV === 'development';
 
-/** Connection details with the password removed, safe to log or expose. */
 export function redactedConnection(): { uri: string; user: string; database: string } {
   return {
     uri: env.COGNODB_URI,

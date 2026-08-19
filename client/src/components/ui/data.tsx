@@ -5,7 +5,6 @@ import { cn } from '@/lib/cn';
 import { hueStyles, ratioHue } from '@/lib/color';
 import { percent } from '@/lib/format';
 
-/** Headline number with a label and optional trailing detail. */
 export function StatTile({
   label,
   value,
@@ -52,10 +51,6 @@ export function StatTile({
   );
 }
 
-/**
- * Horizontal bar for a 0–1 ratio. Colour is derived from the value so a low
- * number reads as a problem without the caller choosing a class.
- */
 export function Meter({
   value,
   label,
@@ -104,7 +99,6 @@ export function Meter({
   );
 }
 
-/** The 1–5 proficiency scale, drawn as five segments. */
 export function LevelPips({
   level,
   required,
@@ -112,7 +106,6 @@ export function LevelPips({
   className,
 }: {
   level: number;
-  /** Draws a marker at the level a role or project demands. */
   required?: number;
   hue?: number;
   className?: string;
@@ -140,7 +133,6 @@ export function LevelPips({
   );
 }
 
-/** Label/value pair used throughout the detail pages. */
 export function DefinitionRow({
   term,
   children,

@@ -21,10 +21,6 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
 import { apiGet, type QueryValue } from './client';
 
-/**
- * Query keys in one place so a cache entry can never be invalidated by a key
- * that drifted out of sync with the one that wrote it.
- */
 export const queryKeys = {
   health: ['health'] as const,
   overview: ['insights', 'overview'] as const,
@@ -46,19 +42,18 @@ export const queryKeys = {
   suggestions: (personId: string) => ['pathfinder', 'suggestions', personId] as const,
 };
 
-// --- health ----------------------------------------------------------------
+// --- health
 
 export function useHealth(): UseQueryResult<HealthResponse> {
   return useQuery({
     queryKey: queryKeys.health,
     queryFn: ({ signal }) => apiGet<HealthResponse>('/health', undefined, signal),
-    // Keeps the connection banner honest without hammering a free-tier instance.
     refetchInterval: 45_000,
     retry: 1,
   });
 }
 
-// --- dashboard -------------------------------------------------------------
+// --- dashboard ---------
 
 export function useOverview(): UseQueryResult<OverviewStats> {
   return useQuery({
@@ -75,7 +70,7 @@ export function useSinglePointsOfFailure(): UseQueryResult<SinglePointOfFailure[
   });
 }
 
-// --- people ----------------------------------------------------------------
+// --- people
 
 export interface PeopleFilters extends Record<string, QueryValue> {
   q?: string;
@@ -131,7 +126,7 @@ export function useConnection(
   });
 }
 
-// --- projects --------------------------------------------------------------
+// --- projects ----------
 
 export interface ProjectFilters extends Record<string, QueryValue> {
   q?: string;
@@ -165,7 +160,7 @@ export function useHiddenExperts(id: string | undefined): UseQueryResult<HiddenE
   });
 }
 
-// --- skills ----------------------------------------------------------------
+// --- skills
 
 export interface SkillFilters extends Record<string, QueryValue> {
   q?: string;
@@ -198,7 +193,7 @@ export function useSkillCategories(): UseQueryResult<string[]> {
   });
 }
 
-// --- roles & pathfinder ----------------------------------------------------
+// --- roles & pathfinder 
 
 export function useRoles(): UseQueryResult<RoleSummary[]> {
   return useQuery({

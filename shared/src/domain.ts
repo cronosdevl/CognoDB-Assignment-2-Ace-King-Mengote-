@@ -1,9 +1,3 @@
-/** Core domain entities as the API exposes them. */
-
-// ---------------------------------------------------------------------------
-// Vocabularies
-// ---------------------------------------------------------------------------
-
 export const SKILL_CATEGORIES = [
   'Engineering',
   'Data & AI',
@@ -31,25 +25,20 @@ export const PROJECT_STATUSES = ['active', 'planned', 'completed', 'paused'] as 
 export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
 
 /**
- * Proficiency on a 1–5 scale.
- *  1 aware · 2 working · 3 practising · 4 strong · 5 expert
- * Level 4 is the threshold at which someone is considered able to *cover* a
- * requirement or *mentor* another person in it.
+ Proficiency on a 1–5 scale.
+ 1 aware · 2 working · 3 practising · 4 strong · 5 expert
+ Level 4 is the threshold at which someone is considered able to *cover* a
+ requirement or *mentor* another person in it.
  */
 export type SkillLevel = 1 | 2 | 3 | 4 | 5;
 
 export const MENTOR_LEVEL_THRESHOLD = 4;
-
-// ---------------------------------------------------------------------------
-// People
-// ---------------------------------------------------------------------------
 
 export interface PersonSummary {
   id: string;
   name: string;
   title: string;
   seniority: string;
-  /** Stable 0–360 hue derived at seed time, used for deterministic avatars. */
   avatarHue: number;
   openToMove: boolean;
   tenureMonths: number;
@@ -109,20 +98,15 @@ export interface Collaborator extends PersonSummary {
   sharedProjectNames: string[];
 }
 
-// ---------------------------------------------------------------------------
 // Skills
-// ---------------------------------------------------------------------------
 
 export interface SkillSummary {
   id: string;
   name: string;
   category: SkillCategory;
   description: string;
-  /** Number of people holding the skill at any level. */
   holders: number;
-  /** Number of people at MENTOR_LEVEL_THRESHOLD or above. */
   experts: number;
-  /** Number of active projects requiring it. */
   demandedBy: number;
   averageLevel: number;
 }
@@ -131,7 +115,6 @@ export interface AdjacentSkill {
   id: string;
   name: string;
   category: SkillCategory;
-  /** 0–1: how transferable learning is between the two skills. */
   similarity: number;
 }
 
@@ -156,9 +139,7 @@ export interface SkillDetail extends SkillSummary {
   levelDistribution: Array<{ level: SkillLevel; count: number }>;
 }
 
-// ---------------------------------------------------------------------------
 // Projects
-// ---------------------------------------------------------------------------
 
 export interface ProjectSummary {
   id: string;
@@ -171,7 +152,6 @@ export interface ProjectSummary {
   endedAt: string | null;
   headcount: number;
   requiredSkillCount: number;
-  /** 0–1 share of required skills currently covered by staffed people. */
   coverage: number;
 }
 
@@ -181,17 +161,14 @@ export interface ProjectSkillRequirement {
   category: SkillCategory;
   importance: number;
   minLevel: SkillLevel;
-  /** People on the project meeting `minLevel`. */
   coveredBy: PersonSummary[];
   covered: boolean;
 }
 
 export interface CandidateSuggestion extends PersonSummary {
-  /** Composite 0–100 fit score. */
   score: number;
   matchedSkills: Array<{ skillId: string; name: string; level: SkillLevel; viaAdjacent: boolean }>;
   missingSkills: Array<{ skillId: string; name: string; minLevel: SkillLevel }>;
-  /** Collaboration hops from anyone already on the project (0 = already on it). */
   collaborationDistance: number | null;
 }
 
@@ -202,9 +179,8 @@ export interface ProjectDetail extends ProjectSummary {
   candidates: CandidateSuggestion[];
 }
 
-// ---------------------------------------------------------------------------
+
 // Roles & career paths
-// ---------------------------------------------------------------------------
 
 export interface RoleSummary {
   id: string;
@@ -229,9 +205,7 @@ export interface SkillGapEntry {
   requiredLevel: SkillLevel;
   currentLevel: SkillLevel | 0;
   gap: number;
-  /** Best in-house mentor for closing this gap, if one exists. */
   mentor: (PersonSummary & { level: SkillLevel; collaborationDistance: number | null }) | null;
-  /** Adjacent skill the person already holds that shortens the climb. */
   headStart: { skillId: string; name: string; level: SkillLevel; similarity: number } | null;
 }
 
@@ -240,7 +214,6 @@ export interface CareerPathStep {
   role: RoleSummary;
   typicalMonths: number;
   gaps: SkillGapEntry[];
-  /** 0–1 readiness for this step given the person's current skills. */
   readiness: number;
 }
 
@@ -248,16 +221,13 @@ export interface CareerPath {
   person: PersonSummary;
   fromRole: RoleSummary | null;
   targetRole: RoleSummary;
-  /** Empty when no route exists through the PROGRESSES_TO ladder. */
   steps: CareerPathStep[];
   totalMonths: number;
   overallReadiness: number;
   reachable: boolean;
 }
 
-// ---------------------------------------------------------------------------
 // Connections & risk
-// ---------------------------------------------------------------------------
 
 export type ConnectionHopType = 'WORKED_ON' | 'MENTORS' | 'REPORTS_TO' | 'MEMBER_OF' | 'HAS_SKILL';
 
@@ -281,9 +251,7 @@ export interface SinglePointOfFailure {
   name: string;
   category: SkillCategory;
   expert: PersonSummary;
-  /** Active projects that require the skill and would be exposed. */
   exposedProjects: Array<{ projectId: string; name: string; code: string; importance: number }>;
-  /** Next-best person, who would need to close this gap. */
   understudy: (PersonSummary & { level: SkillLevel }) | null;
   severity: number;
 }
@@ -295,7 +263,6 @@ export interface DepartureImpact {
     name: string;
     code: string;
     status: ProjectStatus;
-    /** Requirements only this person satisfied on that project. */
     orphanedSkills: Array<{ skillId: string; name: string; minLevel: SkillLevel }>;
   }>;
   criticalSkills: Array<{ skillId: string; name: string; otherExperts: number }>;
@@ -304,17 +271,13 @@ export interface DepartureImpact {
 }
 
 export interface HiddenExpert extends PersonSummary {
-  /** Collaboration hops from the project's current staff. */
   distance: number;
   matchedSkills: Array<{ skillId: string; name: string; level: SkillLevel }>;
-  /** The chain of colleagues connecting them to the project. */
   connectedVia: PersonSummary[];
   score: number;
 }
 
-// ---------------------------------------------------------------------------
 // Dashboard
-// ---------------------------------------------------------------------------
 
 export interface DatasetCounts {
   people: number;

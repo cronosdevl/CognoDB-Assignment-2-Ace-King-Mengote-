@@ -31,14 +31,6 @@ export const GET_PERSON_SUMMARY = defineQuery(
   `,
 );
 
-/**
- * A person's whole card in one round trip.
- *
- * Skills, projects, certifications, mentors, mentees, manager and reports are
- * all collected with pattern comprehensions rather than a chain of OPTIONAL
- * MATCHes, which avoids the cartesian blow-up that would otherwise multiply
- * every skill row by every project row.
- */
 export const GET_PERSON = defineQuery(
   'people:detail',
   `
@@ -79,15 +71,6 @@ export const GET_PERSON = defineQuery(
   `,
 );
 
-/**
- * Collaborators, derived rather than stored.
- *
- * There is no COLLEAGUE relationship in the graph — "who have you actually
- * worked with" is the two-hop pattern Person→Project←Person, aggregated by how
- * many projects the two share. In a relational schema this is a self-join
- * through the membership table with a GROUP BY; here it is the natural shape of
- * the data.
- */
 export const GET_COLLABORATORS = defineQuery(
   'people:collaborators',
   `
@@ -102,16 +85,6 @@ export const GET_COLLABORATORS = defineQuery(
   `,
 );
 
-/**
- * Degrees of separation between two colleagues.
- *
- * The traversal deliberately mixes three edge types — shared projects,
- * mentorship and reporting lines — because a meaningful introduction path uses
- * whichever is shortest. `shortestPath` explores this in the engine; the
- * relational equivalent is a recursive CTE over a union of three join tables
- * with cycle detection, which is exactly the sort of query a graph database
- * exists to make ordinary.
- */
 export const FIND_CONNECTION = defineQuery(
   'people:connection',
   `
@@ -134,11 +107,6 @@ export const FIND_CONNECTION = defineQuery(
   `,
 );
 
-/**
- * The people a person is closest to, as a small graph for the visualiser.
- * Depth is capped by the caller; the traversal fans out over projects,
- * mentorship and reporting lines.
- */
 export const PERSON_NETWORK = defineQuery(
   'people:network',
   `

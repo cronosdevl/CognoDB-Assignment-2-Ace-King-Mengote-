@@ -36,11 +36,6 @@ export function Badge({
   );
 }
 
-/**
- * A badge coloured from an arbitrary hue rather than the fixed tone palette —
- * used wherever colour encodes data (skill category, coverage, risk) so that a
- * new category needs no new class.
- */
 export function HueBadge({
   children,
   hue,

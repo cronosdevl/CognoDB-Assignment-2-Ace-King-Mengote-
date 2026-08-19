@@ -26,14 +26,6 @@ function nodeText(kind: GraphNodeKind, isFocus: boolean, isDark: boolean): strin
   return isDark ? `oklch(92% 0.05 ${hue})` : `oklch(38% 0.14 ${hue})`;
 }
 
-/**
- * The ego network, drawn as SVG.
- *
- * SVG rather than canvas because the graph is small (a few dozen nodes), and
- * SVG gives real DOM nodes — so each one can be focused with a keyboard,
- * announced by a screen reader and navigated with Enter, which a canvas
- * would have to reimplement from scratch.
- */
 export function NetworkGraph({ payload, height = 460 }: { payload: GraphPayload; height?: number }) {
   const { isDark } = useTheme();
   const navigate = useNavigate();
@@ -172,8 +164,6 @@ export function NetworkGraph({ payload, height = 460 }: { payload: GraphPayload;
                     fontSize={11}
                     fontWeight={600}
                     fill="var(--color-ink)"
-                    // A halo in the surface colour keeps the name readable even
-                    // when the layout drops it across a neighbouring node.
                     stroke="var(--color-surface)"
                     strokeWidth={3.5}
                     paintOrder="stroke"

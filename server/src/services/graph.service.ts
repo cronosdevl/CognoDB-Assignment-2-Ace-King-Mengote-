@@ -16,16 +16,8 @@ interface Membership {
   projectId: string;
 }
 
-/** Keeps the force layout legible; beyond this a hairball tells you nothing. */
 const MAX_PEERS = 24;
 
-/**
- * Build the ego network around one person for the visualiser.
- *
- * The shape is deliberately bipartite — people connect to projects, not
- * directly to one another — because that is the actual structure of the data
- * and it shows *why* two people are linked rather than merely that they are.
- */
 export async function getPersonGraph(personId: string): Promise<GraphPayload> {
   const result = await readOne(
     PERSON_NETWORK,
@@ -76,8 +68,6 @@ export async function getPersonGraph(personId: string): Promise<GraphPayload> {
     });
   }
 
-  // The same peer appears once per shared project; rank by that count and keep
-  // the closest, so the picture stays readable on a laptop screen.
   const peerCounts = new Map<string, number>();
   for (const peer of result.peers) {
     peerCounts.set(peer.id, (peerCounts.get(peer.id) ?? 0) + 1);
@@ -114,8 +104,6 @@ export async function getPersonGraph(personId: string): Promise<GraphPayload> {
     });
   }
 
-  // Mentorship rides on top of the project structure — it is the edge that
-  // explains relationships the project graph alone cannot.
   for (const mentor of result.mentors) {
     if (!visiblePeerIds.has(mentor.id)) {
       nodes.push({

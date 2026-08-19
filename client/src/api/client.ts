@@ -1,9 +1,5 @@
 import type { ApiErrorBody, ApiErrorCode } from '@wayfinder/shared';
 
-/**
- * Empty in development so requests go to `/api/...` and through the Vite proxy;
- * set at build time when the API lives on another origin.
- */
 const BASE_URL: string = (import.meta.env['VITE_API_BASE_URL'] as string | undefined)?.replace(/\/$/, '') ?? '';
 
 export class ApiError extends Error {
@@ -19,7 +15,6 @@ export class ApiError extends Error {
     this.details = details;
   }
 
-  /** True when the failure is the database rather than the request. */
   get isDatabaseOutage(): boolean {
     return this.code === 'DATABASE_UNAVAILABLE';
   }
@@ -41,12 +36,6 @@ function buildUrl(path: string, params?: Record<string, QueryValue>): string {
   return `${BASE_URL}/api${path}${query ? `?${query}` : ''}`;
 }
 
-/**
- * One place where every request is made, so the failure modes are handled once:
- * a JSON error envelope becomes an `ApiError`, and a network failure — the API
- * itself being down — is reported as a database outage, because from the user's
- * point of view the effect and the remedy are the same.
- */
 export async function apiGet<T>(
   path: string,
   params?: Record<string, QueryValue>,

@@ -5,11 +5,6 @@ import { isProduction } from '../config/env.js';
 import { AppError, toAppError } from '../db/errors.js';
 import { logger } from '../lib/logger.js';
 
-/**
- * Express 4 does not forward rejected promises from async handlers, so every
- * route is wrapped in this. Without it a database outage would hang the request
- * instead of returning the 503 the UI knows how to render.
- */
 export function asyncHandler(
   handler: (request: Request, response: Response, next: NextFunction) => Promise<unknown>,
 ): RequestHandler {
@@ -29,7 +24,6 @@ export function errorHandler(
   error: unknown,
   request: Request,
   response: Response,
-  // Express identifies error middleware by arity — the parameter must stay.
   _next: NextFunction,
 ): void {
   const appError = error instanceof AppError ? error : toAppError(error, `${request.method} ${request.path}`);

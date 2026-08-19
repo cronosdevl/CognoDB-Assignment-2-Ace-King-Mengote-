@@ -7,12 +7,8 @@ export interface SkillSeed {
   description: string;
 }
 
-/**
- * A curated competency taxonomy. Ids are stable slugs so the seed script is
- * idempotent — re-running it MERGEs onto the same nodes rather than duplicating.
- */
 export const SKILLS: SkillSeed[] = [
-  // --- Engineering ---------------------------------------------------------
+  // --- Engineering 
   { id: 'typescript', name: 'TypeScript', category: 'Engineering', description: 'Typed JavaScript for application and service code.' },
   { id: 'python', name: 'Python', category: 'Engineering', description: 'General-purpose scripting, services and data work.' },
   { id: 'go', name: 'Go', category: 'Engineering', description: 'Concurrent services and CLI tooling.' },
@@ -29,7 +25,7 @@ export const SKILLS: SkillSeed[] = [
   { id: 'mobile', name: 'Mobile Development', category: 'Engineering', description: 'Cross-platform mobile applications.' },
   { id: 'refactoring', name: 'Refactoring & Legacy Code', category: 'Engineering', description: 'Safely reshaping systems that are already in production.' },
 
-  // --- Data & AI -----------------------------------------------------------
+  // --- Data & AI --
   { id: 'sql', name: 'SQL', category: 'Data & AI', description: 'Relational querying, indexing and query planning.' },
   { id: 'cypher', name: 'Cypher & Graph Modelling', category: 'Data & AI', description: 'Property-graph modelling and openCypher traversals.' },
   { id: 'data-modelling', name: 'Data Modelling', category: 'Data & AI', description: 'Designing schemas that match access patterns.' },
@@ -46,7 +42,7 @@ export const SKILLS: SkillSeed[] = [
   { id: 'mlops', name: 'MLOps', category: 'Data & AI', description: 'Serving, monitoring and retraining models.' },
   { id: 'analytics-eng', name: 'Analytics Engineering', category: 'Data & AI', description: 'Modelled, tested, documented warehouse layers.' },
 
-  // --- Product -------------------------------------------------------------
+  // --- Product ----
   { id: 'discovery', name: 'Product Discovery', category: 'Product', description: 'Finding problems worth solving before building.' },
   { id: 'roadmapping', name: 'Roadmapping', category: 'Product', description: 'Sequencing work against strategy and capacity.' },
   { id: 'stakeholder-mgmt', name: 'Stakeholder Management', category: 'Product', description: 'Aligning people who do not report to you.' },
@@ -55,7 +51,7 @@ export const SKILLS: SkillSeed[] = [
   { id: 'pricing', name: 'Pricing & Packaging', category: 'Product', description: 'Monetisation models and commercial structure.' },
   { id: 'tech-writing', name: 'Technical Writing', category: 'Product', description: 'Documentation, specs and decision records.' },
 
-  // --- Design --------------------------------------------------------------
+  // --- Design -----
   { id: 'interaction-design', name: 'Interaction Design', category: 'Design', description: 'Flows, states and behaviour of an interface.' },
   { id: 'visual-design', name: 'Visual Design', category: 'Design', description: 'Typography, colour, layout and hierarchy.' },
   { id: 'design-systems', name: 'Design Systems', category: 'Design', description: 'Reusable components, tokens and governance.' },
@@ -64,7 +60,7 @@ export const SKILLS: SkillSeed[] = [
   { id: 'ux-writing', name: 'UX Writing', category: 'Design', description: 'Interface language that reduces confusion.' },
   { id: 'motion-design', name: 'Motion Design', category: 'Design', description: 'Transitions and animation that carry meaning.' },
 
-  // --- Infrastructure ------------------------------------------------------
+  // --- Infrastructure 
   { id: 'kubernetes', name: 'Kubernetes', category: 'Infrastructure', description: 'Container orchestration and workload scheduling.' },
   { id: 'terraform', name: 'Terraform', category: 'Infrastructure', description: 'Declarative infrastructure as code.' },
   { id: 'aws', name: 'AWS', category: 'Infrastructure', description: 'Amazon cloud platform services.' },
@@ -77,7 +73,7 @@ export const SKILLS: SkillSeed[] = [
   { id: 'docker', name: 'Docker', category: 'Infrastructure', description: 'Container images and local parity.' },
   { id: 'database-admin', name: 'Database Operations', category: 'Infrastructure', description: 'Backups, replication, tuning and migrations.' },
 
-  // --- Security ------------------------------------------------------------
+  // --- Security ---
   { id: 'threat-modelling', name: 'Threat Modelling', category: 'Security', description: 'Structured reasoning about attack surface.' },
   { id: 'appsec', name: 'Application Security', category: 'Security', description: 'Secure coding, review and vulnerability triage.' },
   { id: 'iam', name: 'Identity & Access', category: 'Security', description: 'AuthN, authZ, federation and least privilege.' },
@@ -85,7 +81,7 @@ export const SKILLS: SkillSeed[] = [
   { id: 'incident-response', name: 'Incident Response', category: 'Security', description: 'Detection, containment and post-incident review.' },
   { id: 'compliance', name: 'Compliance & Audit', category: 'Security', description: 'SOC 2, ISO 27001 and evidence collection.' },
 
-  // --- Domain --------------------------------------------------------------
+  // --- Domain -----
   { id: 'logistics', name: 'Logistics Optimisation', category: 'Domain', description: 'Routing, scheduling and capacity planning.' },
   { id: 'payments', name: 'Payments & Billing', category: 'Domain', description: 'Ledgers, reconciliation and payment rails.' },
   { id: 'healthcare-data', name: 'Healthcare Data', category: 'Domain', description: 'HL7/FHIR, clinical coding and PHI handling.' },
@@ -93,7 +89,7 @@ export const SKILLS: SkillSeed[] = [
   { id: 'supply-chain', name: 'Supply Chain', category: 'Domain', description: 'Inventory, suppliers and demand forecasting.' },
   { id: 'fraud', name: 'Fraud Detection', category: 'Domain', description: 'Risk scoring, rules and adversarial patterns.' },
 
-  // --- Leadership ----------------------------------------------------------
+  // --- Leadership -
   { id: 'mentoring', name: 'Coaching & Mentoring', category: 'Leadership', description: 'Growing other people deliberately.' },
   { id: 'hiring', name: 'Hiring & Interviewing', category: 'Leadership', description: 'Calibrated assessment and closing candidates.' },
   { id: 'tech-leadership', name: 'Technical Leadership', category: 'Leadership', description: 'Setting technical direction across a group.' },
@@ -102,14 +98,6 @@ export const SKILLS: SkillSeed[] = [
   { id: 'strategy', name: 'Strategic Planning', category: 'Leadership', description: 'Multi-quarter direction and trade-off framing.' },
 ];
 
-/**
- * Curated skill adjacency. `similarity` (0–1) expresses how much competence in
- * one transfers to the other — the edge that lets the pathfinder tell someone
- * "you already know Spark, so the ETL gap is a short climb".
- *
- * Stored as a single undirected pair; the seed script writes it once and every
- * query traverses it without a direction.
- */
 export const SKILL_ADJACENCY: Array<[string, string, number]> = [
   ['typescript', 'nodejs', 0.8],
   ['typescript', 'react', 0.72],

@@ -9,7 +9,6 @@ export interface TeamSeed {
   id: string;
   name: string;
   departmentId: string;
-  /** Roles that plausibly sit on this team; drives person generation. */
   roleMix: string[];
 }
 
@@ -34,13 +33,11 @@ export interface ProjectSeed {
   status: ProjectStatus;
   summary: string;
   businessUnit: string;
-  /** Skills the project needs, with importance (0–1) and minimum level. */
   requires: Array<[skillId: string, importance: number, minLevel: SkillLevel]>;
 }
 
-// ---------------------------------------------------------------------------
+
 // Meridian Labs — a fictional ~180-person product company.
-// ---------------------------------------------------------------------------
 
 export const DEPARTMENTS: DepartmentSeed[] = [
   { id: 'dept-engineering', name: 'Engineering' },

@@ -1,14 +1,3 @@
-/**
- * Render every screen against the running app, fail on any console error, and
- * write the README screenshots.
- *
- *   npm run dev            # in one terminal
- *   npm run screenshots    # in another
- *
- * This is a smoke test first and a screenshot tool second: a React runtime
- * error does not break `tsc` or `vite build`, so without actually rendering the
- * pages a broken screen ships silently.
- */
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -18,7 +7,6 @@ import { chromium } from 'playwright';
 const BASE = process.env.SCREENSHOT_BASE_URL ?? 'http://localhost:5173';
 const OUT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../docs/screenshots');
 
-/** `wait` is a selector that must appear before the page counts as rendered. */
 const SCREENS = [
   { name: 'overview', url: '/', wait: 'text=Meridian Labs at a glance' },
   { name: 'pathfinder', url: '/pathfinder', wait: 'text=Career pathfinder' },
@@ -48,7 +36,6 @@ async function capture(page, screen, theme) {
   try {
     await page.goto(`${BASE}${screen.url}`, { waitUntil: 'networkidle', timeout: 45_000 });
     await page.waitForSelector(screen.wait, { timeout: 30_000 });
-    // Let the force layout settle and the fade-in finish.
     await page.waitForTimeout(900);
     await page.screenshot({ path: path.join(OUT, `${label}.png`), fullPage: true });
     console.log(`  captured ${label}`);
@@ -60,7 +47,6 @@ async function capture(page, screen, theme) {
     page.off('pageerror', onPageError);
   }
 
-  // React logs key/prop warnings as console.error; treat them as failures too.
   const real = errors.filter((text) => !text.includes('Download the React DevTools'));
   if (real.length > 0) {
     for (const text of real) problems.push(`${label} console: ${text.slice(0, 200)}`);

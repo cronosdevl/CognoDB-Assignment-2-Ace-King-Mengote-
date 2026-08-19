@@ -26,18 +26,6 @@ export const GET_ROLE = defineQuery(
   `,
 );
 
-/**
- * The career ladder as a route-planning problem.
- *
- * `PROGRESSES_TO` is a genuine graph, not a tree: lateral moves across families
- * (senior engineer → ML engineer, senior designer → product manager, SRE →
- * security) mean there are usually several ways to reach a target role and they
- * are not the same length. `shortestPath` finds the fewest-move route directly;
- * the SQL equivalent is a recursive CTE that has to enumerate paths, guard
- * against cycles and then take a MIN over the results.
- *
- * Bounded at six moves — beyond that the answer stops being career advice.
- */
 export const FIND_ROLE_PATH = defineQuery(
   'pathfinder:role-path',
   `
@@ -50,23 +38,6 @@ export const FIND_ROLE_PATH = defineQuery(
   `,
 );
 
-/**
- * For every role on a route, what is this person still missing — and who in the
- * building could teach it to them?
- *
- * Three separate ideas are resolved per gap, and each is a traversal the
- * relational model would need its own join for:
- *
- *  · the gap itself — role requirement minus current proficiency;
- *  · the head start — an *adjacent* skill they already hold, so "you know Spark,
- *    so the ETL requirement is a short climb" rather than "you lack ETL";
- *  · the mentor — the strongest holder of that skill, preferring someone the
- *    person has already shipped with, because advice from a stranger two
- *    departments away rarely turns into anything.
- *
- * The `collect(...)[0]` after an ORDER BY is the portable way to take a
- * best-of-group without a correlated subquery.
- */
 export const FIND_SKILL_GAPS = defineQuery(
   'pathfinder:skill-gaps',
   `

@@ -7,13 +7,6 @@ import { categoryHue } from '@/lib/format';
 
 type Row = OverviewStats['topSkillsByDemand'][number];
 
-/**
- * Paired horizontal bars: demand above, supply below, on a shared scale.
- *
- * Two bars rather than a ratio because the absolute numbers matter — "3 projects
- * need it, 4 people have it" is a different situation from "12 need it, 16 have
- * it", and a single percentage hides that.
- */
 export function SupplyDemandChart({ data }: { data: Row[] }) {
   const { isDark } = useTheme();
 

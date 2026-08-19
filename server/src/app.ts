@@ -20,8 +20,6 @@ export function createApp(): Express {
 
   app.use(
     helmet({
-      // The SPA is served from the same origin in production and loads no
-      // third-party scripts, so the default CSP is left in place.
       crossOriginEmbedderPolicy: false,
     }),
   );
@@ -31,7 +29,6 @@ export function createApp(): Express {
   app.use(
     cors({
       origin(origin, callback) {
-        // Same-origin requests and curl send no Origin header.
         if (!origin || env.CORS_ORIGIN.includes(origin) || env.CORS_ORIGIN.includes('*')) {
           callback(null, true);
           return;
@@ -42,7 +39,6 @@ export function createApp(): Express {
     }),
   );
 
-  // Compact request log; the browser's network tab covers the rest.
   app.use((request, response, next) => {
     const startedAt = Date.now();
     response.on('finish', () => {
@@ -57,8 +53,6 @@ export function createApp(): Express {
 
   app.use('/api', apiRouter);
 
-  // In production the built SPA is served from the same process, which keeps
-  // the deployment to a single service and sidesteps CORS entirely.
   const clientDist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../client/dist');
   if (isProduction && existsSync(clientDist)) {
     logger.info('Serving built client', { path: clientDist });

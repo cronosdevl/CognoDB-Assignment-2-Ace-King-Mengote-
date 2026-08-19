@@ -7,8 +7,6 @@ who could step into this project, what is the shortest route from where someone
 is to where they want to be, and what breaks if a particular person resigns on
 Friday.
 
-> **Live demo:** _<add your hosted URL here>_
-> **Walkthrough video:** _<add your screen recording link here>_
 
 ---
 

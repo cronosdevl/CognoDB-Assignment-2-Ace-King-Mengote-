@@ -6,14 +6,6 @@ import { logger } from '../lib/logger.js';
 import { assertDriver } from './driver.js';
 import { isRetryable, toAppError } from './errors.js';
 
-/**
- * A named, immutable Cypher statement.
- *
- * Queries are *only* constructible through `defineQuery`, and the runners below
- * accept nothing else. Combined with the parameter object, this makes
- * string-concatenated Cypher structurally impossible at every call site — user
- * input can only ever arrive as a bound parameter.
- */
 export interface CypherQuery {
   readonly name: string;
   readonly text: string;
@@ -25,11 +17,6 @@ export function defineQuery(name: string, text: string): CypherQuery {
   return Object.freeze({ name, text: text.trim() });
 }
 
-/**
- * Identifiers cannot be parameterised in Cypher, so the rare query that needs a
- * dynamic label or relationship type builds it from a fixed allow-list. This
- * helper makes those sites explicit and greppable rather than ad-hoc.
- */
 export function defineQueryFromTemplate<T extends string>(
   name: string,
   allowed: readonly T[],
@@ -43,7 +30,6 @@ export function defineQueryFromTemplate<T extends string>(
 }
 
 interface RunOptions {
-  /** Attempts for transient failures (network blips, leader elections). */
   retries?: number;
 }
 
@@ -110,7 +96,6 @@ async function execute(
   throw toAppError(lastError, query.name);
 }
 
-/** Run a read query and map each record. */
 export async function read<T>(
   query: CypherQuery,
   params: QueryParams,
@@ -121,7 +106,6 @@ export async function read<T>(
   return records.map(map);
 }
 
-/** Run a read query expected to return at most one row. */
 export async function readOne<T>(
   query: CypherQuery,
   params: QueryParams,
@@ -132,7 +116,6 @@ export async function readOne<T>(
   return rows[0] ?? null;
 }
 
-/** Run a write query. Seed and maintenance paths only. */
 export async function write<T>(
   query: CypherQuery,
   params: QueryParams,
@@ -143,7 +126,6 @@ export async function write<T>(
   return records.map(map);
 }
 
-/** Run a write query, discarding results. */
 export async function writeVoid(
   query: CypherQuery,
   params: QueryParams = {},

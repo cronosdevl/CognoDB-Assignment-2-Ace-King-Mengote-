@@ -90,8 +90,6 @@ export async function getOverview(): Promise<OverviewStats> {
     topSkillsByDemand: supplyDemand
       .slice(0, 8)
       .map(({ skillId, name, category, demand, supply }) => ({ skillId, name, category, demand, supply })),
-    // Highest demand with the fewest experts behind it — where a single
-    // resignation would hurt most.
     scarcestSkills: [...supplyDemand]
       .sort((a, b) => a.experts - b.experts || b.demand - a.demand)
       .slice(0, 6)
@@ -101,13 +99,6 @@ export async function getOverview(): Promise<OverviewStats> {
   };
 }
 
-/**
- * The "what if they leave?" simulation.
- *
- * Deliberately three separate traversals — the projects that lose a capability,
- * the company-wide skills that thin out, and the people who could step in —
- * because each answers a different question a manager would actually ask.
- */
 export async function getDepartureImpact(personId: string): Promise<DepartureImpact> {
   const person = await getPersonSummary(personId);
 
@@ -136,8 +127,6 @@ export async function getDepartureImpact(personId: string): Promise<DepartureImp
     })),
   ]);
 
-  // Weight orphaned project capabilities heavily; a skill nobody else has at
-  // all is the other half of the risk.
   const orphanCount = affectedProjects.reduce((sum, project) => sum + project.orphanedSkills.length, 0);
   const soleExpertCount = criticalSkills.filter((skill) => skill.otherExperts === 0).length;
   const riskScore = Math.min(100, orphanCount * 12 + soleExpertCount * 18 + affectedProjects.length * 4);

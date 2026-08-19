@@ -4,15 +4,13 @@ export interface RoleSeed {
   id: string;
   title: string;
   family: RoleFamily;
-  /** 1 (entry) … 6 (executive). Used for sorting, not for traversal. */
   level: number;
   description: string;
-  /** Skills the role expects, with the minimum proficiency and a 0–1 weight. */
   requires: Array<[skillId: string, minLevel: SkillLevel, weight: number]>;
 }
 
 export const ROLES: RoleSeed[] = [
-  // --- Engineering ladder --------------------------------------------------
+  // --- Engineering ladder ----
   {
     id: 'junior-swe',
     title: 'Junior Software Engineer',
@@ -111,7 +109,7 @@ export const ROLES: RoleSeed[] = [
     ],
   },
 
-  // --- Data & AI ladder ----------------------------------------------------
+  // --- Data & AI ladder ------
   {
     id: 'data-analyst',
     title: 'Data Analyst',
@@ -248,7 +246,7 @@ export const ROLES: RoleSeed[] = [
     ],
   },
 
-  // --- Product ladder ------------------------------------------------------
+  // --- Product ladder -
   {
     id: 'associate-pm',
     title: 'Associate Product Manager',
@@ -317,7 +315,7 @@ export const ROLES: RoleSeed[] = [
     ],
   },
 
-  // --- Design ladder -------------------------------------------------------
+  // --- Design ladder --
   {
     id: 'product-designer',
     title: 'Product Designer',
@@ -373,7 +371,7 @@ export const ROLES: RoleSeed[] = [
     ],
   },
 
-  // --- Infrastructure ladder ----------------------------------------------
+  // --- Infrastructure ladder 
   {
     id: 'platform-engineer',
     title: 'Platform Engineer',
@@ -430,7 +428,7 @@ export const ROLES: RoleSeed[] = [
     ],
   },
 
-  // --- Security ladder -----------------------------------------------------
+  // --- Security ladder 
   {
     id: 'security-engineer',
     title: 'Security Engineer',
@@ -472,7 +470,7 @@ export const ROLES: RoleSeed[] = [
     ],
   },
 
-  // --- Management ladder ---------------------------------------------------
+  // --- Management ladder 
   {
     id: 'engineering-manager',
     title: 'Engineering Manager',
@@ -516,15 +514,8 @@ export const ROLES: RoleSeed[] = [
   },
 ];
 
-/**
- * The career ladder itself: a directed graph of realistic next moves with the
- * typical time spent before making them.
- *
- * Crucially this is *not* a tree. Lateral moves across families (senior
- * engineer → ML engineer, senior designer → product manager, SRE → security)
- * create the cycles and alternate routes that make shortest-path search over
- * the ladder worth doing at all.
- */
+// career ladder
+
 export const ROLE_PROGRESSION: Array<[from: string, to: string, typicalMonths: number]> = [
   // Engineering
   ['junior-swe', 'swe', 18],

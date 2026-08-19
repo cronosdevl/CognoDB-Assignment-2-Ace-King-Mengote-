@@ -5,7 +5,6 @@ import { cn } from '@/lib/cn';
 interface CardProps {
   children: ReactNode;
   className?: string;
-  /** Adds a hover lift; use only when the whole card is clickable. */
   interactive?: boolean;
 }
 

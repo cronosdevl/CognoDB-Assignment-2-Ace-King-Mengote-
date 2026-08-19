@@ -76,8 +76,6 @@ export async function getSkill(id: string): Promise<SkillDetail> {
 
   return {
     ...core,
-    // ADJACENT_TO is stored once and traversed without direction, so the same
-    // neighbour can come back from both ends of the pair.
     adjacent: uniqueBy(core.adjacent, (skill) => skill.id).sort((a, b) => b.similarity - a.similarity),
     requiredByProjects: [...core.requiredByProjects].sort((a, b) => b.importance - a.importance),
     requiredByRoles: [...core.requiredByRoles].sort((a, b) => a.title.localeCompare(b.title)),

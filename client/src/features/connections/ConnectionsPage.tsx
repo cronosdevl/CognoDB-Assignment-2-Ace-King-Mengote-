@@ -20,13 +20,6 @@ const HOP_ICONS = {
   HAS_SKILL: Users,
 } as const;
 
-/**
- * Degrees of separation between two colleagues.
- *
- * The traversal mixes shared projects, mentorship and reporting lines, because
- * the most useful introduction path is whichever is shortest — not whichever
- * table you happened to join first.
- */
 export function ConnectionsPage() {
   const [from, setFrom] = useState<PersonSummary | null>(null);
   const [to, setTo] = useState<PersonSummary | null>(null);

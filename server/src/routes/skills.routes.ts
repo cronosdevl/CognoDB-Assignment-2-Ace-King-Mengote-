@@ -14,7 +14,6 @@ skillsRouter.get(
   }),
 );
 
-// Ahead of `/:id` so the literal path wins over the parameterised one.
 skillsRouter.get(
   '/categories',
   asyncHandler(async (_request, response) => {

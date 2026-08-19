@@ -1,8 +1,5 @@
-/**
- * Name pools for generated colleagues. Deliberately international — the
- * generated org spans ten locations, and a directory full of one naming
- * tradition would look like a placeholder rather than a company.
- */
+// Name pools for generated colleagues.
+ 
 
 export const FIRST_NAMES: string[] = [
   'Aarav', 'Adaeze', 'Adrian', 'Aisha', 'Akira', 'Alejandra', 'Amara', 'Amelia', 'Anaya', 'Andrei',

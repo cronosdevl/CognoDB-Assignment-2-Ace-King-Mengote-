@@ -1,13 +1,3 @@
-/**
- * Generate and validate the seed dataset without touching a database.
- *
- *   npm run dataset:check
- *
- * Deliberately imports nothing from `src/config/env` (directly or through the
- * logger) so it runs before any credentials exist — it is the fast way to catch
- * a taxonomy mistake such as a project requiring a skill that was renamed, or a
- * career ladder pointing at a role that no longer exists.
- */
 import { buildDataset, summariseDataset } from './lib/dataset.js';
 
 const dataset = buildDataset();
@@ -48,8 +38,6 @@ const unstaffed = dataset.people.filter(
 console.log(`\nStaffing`);
 console.log(`  people on no project   ${unstaffed.length}`);
 
-// Expert supply behind what projects actually demand. A long tail of
-// zero-expert requirements means the generator, not the org, is the problem.
 const expertsBySkill = new Map<string, number>();
 for (const row of dataset.hasSkill) {
   if (row.level < 4) continue;
@@ -76,10 +64,6 @@ if (buckets.zero > demanded.length * 0.25) {
   process.exitCode = 1;
 }
 
-// Project coverage, computed the same way the app does: a requirement is
-// covered when at least one staffed person meets its minimum level. Tracked
-// here so the seed can be tuned without a database round trip — the interesting
-// target is "mostly covered, with real gaps", not 100%.
 const levelOf = new Map<string, number>();
 for (const row of dataset.hasSkill) levelOf.set(`${row.personId}|${row.skillId}`, row.level);
 

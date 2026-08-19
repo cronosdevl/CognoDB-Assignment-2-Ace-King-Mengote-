@@ -81,7 +81,6 @@ export async function getPerson(id: string): Promise<PersonDetail> {
     email: core.email,
     joinedAt: core.joinedAt,
     bio: core.bio,
-    // Strongest and most recently used first — that is the order a reader scans.
     skills: [...core.skills].sort(
       (a, b) => b.level - a.level || b.endorsements - a.endorsements || a.name.localeCompare(b.name),
     ),
@@ -114,12 +113,6 @@ interface RawPathNode {
   tenureMonths?: number;
 }
 
-/**
- * Turn the raw node/relationship lists from `shortestPath` into person-to-person
- * hops. A shared project shows up in the path as an intermediate `:Project`
- * node, so the mapper collapses `Person → Project → Person` into a single hop
- * labelled with the project, which is how a human would describe it.
- */
 export async function findConnection(
   fromPersonId: string,
   toPersonId: string,

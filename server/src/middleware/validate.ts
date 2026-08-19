@@ -4,13 +4,6 @@ import { z, type ZodTypeAny } from 'zod';
 import { env } from '../config/env.js';
 import { AppError } from '../db/errors.js';
 
-/**
- * Parse and validate request input.
- *
- * Nothing reaches a Cypher parameter without passing through one of these
- * schemas first, so a query never sees an unbounded `limit`, an empty id or a
- * string where it expects a number.
- */
 export function parseQuery<T extends ZodTypeAny>(request: Request, schema: T): z.infer<T> {
   const result = schema.safeParse(request.query);
   if (!result.success) {
@@ -37,7 +30,6 @@ export function parseParams<T extends ZodTypeAny>(request: Request, schema: T): 
   return result.data;
 }
 
-/** Ids in this dataset are slugs; reject anything that is not one. */
 export const idSchema = z
   .string()
   .min(1)

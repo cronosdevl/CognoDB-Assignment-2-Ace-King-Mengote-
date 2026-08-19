@@ -3,19 +3,10 @@ import { DatabaseZap, RefreshCw } from 'lucide-react';
 
 import { useHealth } from '@/api/hooks';
 
-/**
- * A persistent, page-level explanation when CognoDB is unreachable.
- *
- * Individual screens already render their own error state, but those read as
- * "this page failed". When the database is down every page is failing for one
- * reason, and the user needs to be told that once, at the top, with the actual
- * remedy — not seven identical red boxes.
- */
 export function DatabaseBanner() {
   const { data, isLoading, refetch, isFetching } = useHealth();
   const queryClient = useQueryClient();
 
-  // Say nothing until we actually know something is wrong.
   if (isLoading || !data || data.database.ok) return null;
 
   return (

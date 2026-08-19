@@ -6,10 +6,6 @@ import { ROLE_PROGRESSION, ROLES } from '../data/roles.js';
 import { SKILL_ADJACENCY, SKILLS } from '../data/skills.js';
 import { Rng } from './random.js';
 
-// ---------------------------------------------------------------------------
-// Row shapes handed to Cypher. Every array below becomes a single UNWIND batch.
-// ---------------------------------------------------------------------------
-
 export interface PersonRow {
   id: string;
   name: string;
@@ -24,17 +20,6 @@ export interface PersonRow {
   roleId: string;
   teamId: string;
   locationId: string;
-
-  /**
-   * Denormalised display attributes.
-   *
-   * The HOLDS_ROLE / MEMBER_OF / BASED_IN edges below remain authoritative and
-   * are what every traversal uses. These copies exist purely so that projecting
-   * a person into a card is a property read rather than four more hops — which
-   * matters because a person card is frequently produced from inside a
-   * comprehension, and CognoDB cannot nest a pattern comprehension inside
-   * another one. Written only by the seed, from the same source as the edges.
-   */
   roleTitle: string;
   teamName: string;
   departmentName: string;
@@ -111,16 +96,6 @@ const PEOPLE_COUNT = 184;
 const clampLevel = (value: number): SkillLevel =>
   Math.max(1, Math.min(5, Math.round(value))) as SkillLevel;
 
-/**
- * Build the whole graph in memory.
- *
- * The generation order matters: people get their role's required skills first
- * (so role fit is realistic), then adjacent skills (so the "head start" logic in
- * the pathfinder has something to find), then project experience is assigned by
- * matching people to what a project actually needs. Randomness is layered on
- * top of that structure rather than replacing it — a purely random graph
- * produces uniformly mediocre answers to every query.
- */
 export function buildDataset(): Dataset {
   const rng = new Rng(SEED);
 
@@ -139,7 +114,7 @@ export function buildDataset(): Dataset {
     adjacency.get(b)!.push({ id: a, similarity });
   }
 
-  // --- people ---------------------------------------------------------------
+  // --- people
   const people: PersonRow[] = [];
   const hasSkill: HasSkillRow[] = [];
   const personSkillLevels = new Map<string, Map<string, SkillLevel>>();
@@ -148,7 +123,6 @@ export function buildDataset(): Dataset {
   const teamCursor = TEAMS.map((team) => ({ team, assigned: 0 }));
 
   for (let i = 0; i < PEOPLE_COUNT; i += 1) {
-    // Spread people across teams round-robin so no team is empty.
     const slot = teamCursor[i % teamCursor.length]!;
     slot.assigned += 1;
     const team = slot.team;
@@ -157,7 +131,6 @@ export function buildDataset(): Dataset {
     const role = roleById.get(roleId);
     if (!role) throw new Error(`Team ${team.id} references unknown role "${roleId}"`);
 
-    // Unique display name.
     let name = '';
     for (let attempt = 0; attempt < 50; attempt += 1) {
       const candidate = `${rng.pick(FIRST_NAMES)} ${rng.pick(LAST_NAMES)}`;
@@ -179,7 +152,6 @@ export function buildDataset(): Dataset {
       .filter(Boolean)
       .join('.');
 
-    // More senior people have been around longer.
     const tenureMonths = rng.int(3 + role.level * 5, 18 + role.level * 16);
     const joinedAt = rng.pastDate(tenureMonths * 30, tenureMonths * 30 + 25, REFERENCE_DATE);
     const focusSkill = skillById.get(role.requires[0]?.[0] ?? 'typescript');
@@ -197,7 +169,6 @@ export function buildDataset(): Dataset {
       joinedAt,
       tenureMonths,
       avatarHue: rng.int(0, 359),
-      // Senior leadership moves around less.
       openToMove: rng.bool(role.level >= 5 ? 0.12 : 0.34),
       roleId: role.id,
       teamId: team.id,
@@ -208,10 +179,8 @@ export function buildDataset(): Dataset {
       locationLabel: `${location.city}, ${location.country}`,
     });
 
-    // --- skills for this person --------------------------------------------
     const levels = new Map<string, SkillLevel>();
 
-    // 1. Whatever the role requires, roughly at the required level.
     for (const [skillId, minLevel] of role.requires) {
       const drift = rng.weighted([
         [-1, 0.18],
@@ -222,7 +191,6 @@ export function buildDataset(): Dataset {
       levels.set(skillId, clampLevel(minLevel + drift));
     }
 
-    // 2. Skills adjacent to what they already do — the transfer paths.
     const seeds = [...levels.keys()];
     for (const seedSkill of seeds) {
       for (const neighbour of adjacency.get(seedSkill) ?? []) {
@@ -233,19 +201,14 @@ export function buildDataset(): Dataset {
       }
     }
 
-    // 3. A couple of genuinely unrelated interests, so the graph is not a
-    //    perfect reflection of the role taxonomy.
     for (const skill of rng.sample(SKILLS, rng.int(1, 4))) {
       if (levels.has(skill.id)) continue;
       levels.set(skill.id, clampLevel(rng.float(1, 3.4)));
     }
 
-    // HAS_SKILL rows are materialised further down, after the experience pass
-    // has had a chance to raise levels.
     personSkillLevels.set(id, levels);
   }
 
-  // --- projects -------------------------------------------------------------
   const projects = PROJECTS.map((project) => {
     const ageDays = project.status === 'completed' ? rng.int(400, 900) : rng.int(60, 520);
     const startedAt = rng.pastDate(ageDays, ageDays + 20, REFERENCE_DATE);
@@ -272,14 +235,8 @@ export function buildDataset(): Dataset {
     }),
   );
 
-  // --- staffing -------------------------------------------------------------
-  // Score everyone against each project's requirements and staff mostly from
-  // the top of that list, with a deliberate tail of weaker fits. That tail is
-  // what makes the "hidden experts" and "coverage gap" queries interesting:
-  // projects are staffed imperfectly, exactly as they are in real life.
   const workedOn: WorkedOnRow[] = [];
   const projectMembers = new Map<string, string[]>();
-  /** Every project fit per person, used to sweep up anyone left unstaffed. */
   const fitsByPerson = new Map<string, Array<{ projectId: string; score: number }>>();
 
   for (const project of PROJECTS) {
@@ -296,7 +253,6 @@ export function buildDataset(): Dataset {
       })
       .sort((a, b) => b.score - a.score);
 
-    // Record every fit, before the pools are narrowed.
     for (const entry of scored) {
       if (!fitsByPerson.has(entry.person.id)) fitsByPerson.set(entry.person.id, []);
       fitsByPerson.get(entry.person.id)!.push({ projectId: project.id, score: entry.score });
@@ -304,7 +260,6 @@ export function buildDataset(): Dataset {
 
     const headcount = rng.int(5, 12);
     const chosen: string[] = [];
-    // Two thirds from the strongest fits, the rest from a wider band.
     const strongPool = scored.slice(0, Math.max(headcount, 18));
     const widePool = scored.slice(18, 90);
 
@@ -335,18 +290,6 @@ export function buildDataset(): Dataset {
     projectMembers.set(project.id, chosen);
   }
 
-  // Sampling leaves a tail of people on nothing at all, which is both
-  // unrealistic — real organisations staff everybody onto something — and
-  // corrosive to the graph: an unstaffed person has no collaborators, so they
-  // sink to the bottom of every proximity ranking.
-  //
-  // Deliberately *not* their best-fitting project. Putting everyone exactly
-  // where they fit best empties the "suggested additions" and "hidden experts"
-  // panels, because the strongest candidate for a project ends up already on
-  // it. Nobody in a real company is on their globally optimal project either.
-  // Assigning from the second-to-eighth best fit keeps them plausibly staffed,
-  // gives them collaborators, and leaves them discoverable as a candidate for
-  // the project they would actually suit best.
   const staffed = new Set(workedOn.map((row) => row.personId));
   for (const person of people) {
     if (staffed.has(person.id)) continue;
@@ -375,28 +318,11 @@ export function buildDataset(): Dataset {
     staffed.add(person.id);
   }
 
-  // --- experience -----------------------------------------------------------
-  // Without this pass, only *role* requirements ever push anyone to expert
-  // level, so a skill that no role demands at level 4 — technical writing,
-  // graph modelling, payments — ends up with zero experts company-wide even
-  // though several projects need it. That is a generator artefact, not a
-  // finding, and it hollows out the coverage and key-person-risk features.
-  //
-  // People get better at what they actually ship. For each project requirement,
-  // bring a few of the people staffed on it up to the required level. The
-  // number is deliberately small and sometimes zero, which is what leaves a
-  // realistic spread: genuine gaps where nobody was brought up to standard, and
-  // skills resting on exactly one person.
   for (const project of PROJECTS) {
     const members = projectMembers.get(project.id) ?? [];
     if (members.length === 0) continue;
 
     for (const [skillId, , minLevel] of project.requires) {
-      // Tuned against `npm run dataset:check`. Coverage turns out to be driven
-      // mostly by role and adjacent skills rather than by this pass, so these
-      // weights are chosen for the expert distribution they produce: ~11 skills
-      // resting on a single person, ~6 with nobody at all, and roughly one
-      // project in three still carrying an uncovered requirement.
       const trained = rng.weighted([
         [0, 0.16],
         [1, 0.3],
@@ -405,7 +331,6 @@ export function buildDataset(): Dataset {
       ]);
       if (trained === 0) continue;
 
-      // Whoever was already closest is who grew into it.
       const ranked = [...members].sort(
         (a, b) =>
           (personSkillLevels.get(b)?.get(skillId) ?? 0) - (personSkillLevels.get(a)?.get(skillId) ?? 0),
@@ -416,13 +341,11 @@ export function buildDataset(): Dataset {
         if (!levels) continue;
         const current = levels.get(skillId) ?? 0;
         if (current >= minLevel) continue;
-        // Occasionally they overshoot the bar and become a genuine expert.
         levels.set(skillId, clampLevel(minLevel + (rng.bool(0.22) ? 1 : 0)));
       }
     }
   }
 
-  // --- materialise HAS_SKILL ------------------------------------------------
   for (const person of people) {
     const levels = personSkillLevels.get(person.id);
     if (!levels) continue;
@@ -437,9 +360,6 @@ export function buildDataset(): Dataset {
     }
   }
 
-  // --- reporting lines ------------------------------------------------------
-  // Each team's most senior person manages the rest of that team; team leads
-  // report to a department-level leader.
   const reportsTo: PairRow[] = [];
   const teamLeads = new Map<string, string>();
 
@@ -469,10 +389,6 @@ export function buildDataset(): Dataset {
     }
   }
 
-  // --- mentorship -----------------------------------------------------------
-  // Mentorship follows expertise, not the org chart: a mentor is someone strong
-  // in a skill the mentee is actively weak in. This is what makes the
-  // mentorship graph worth traversing separately from REPORTS_TO.
   const mentors: MentorsRow[] = [];
   const mentorLoad = new Map<string, number>();
   const existingPairs = new Set<string>();
@@ -489,7 +405,6 @@ export function buildDataset(): Dataset {
     if (role.level >= 5) continue;
     if (!rng.bool(0.55)) continue;
 
-    // Pick a requirement of their *next* role that they are short on.
     const nextRoles = ROLE_PROGRESSION.filter(([from]) => from === role.id).map(([, to]) => to);
     const nextRole = nextRoles.length > 0 ? roleById.get(rng.pick(nextRoles)) : undefined;
     const targets = (nextRole ?? role).requires;
@@ -517,7 +432,6 @@ export function buildDataset(): Dataset {
     });
   }
 
-  // --- certifications -------------------------------------------------------
   const earned: EarnedRow[] = [];
   for (const person of people) {
     const levels = personSkillLevels.get(person.id)!;
@@ -532,7 +446,7 @@ export function buildDataset(): Dataset {
     }
   }
 
-  // --- validation -----------------------------------------------------------
+  // --- validation ---------------
   for (const role of ROLES) {
     for (const [skillId] of role.requires) {
       if (!skillById.has(skillId)) throw new Error(`Role ${role.id} requires unknown skill "${skillId}"`);

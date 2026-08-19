@@ -151,7 +151,6 @@ export function PersonDetailPage() {
           </Card>
         </div>
 
-        {/* ---------------------------------------------------------------- */}
         <div className="space-y-5">
           <Card>
             <CardBody className="pt-5">

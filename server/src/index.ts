@@ -5,10 +5,6 @@ import { logger } from './lib/logger.js';
 
 async function main(): Promise<void> {
   const app = createApp();
-
-  // Probe CognoDB but do not block startup on it: if the instance is asleep or
-  // still provisioning, the API should come up and say so rather than
-  // crash-loop behind a health check.
   void verifyConnectivityAtBoot();
 
   const server = app.listen(env.PORT, () => {
@@ -24,7 +20,6 @@ async function main(): Promise<void> {
       await closeDriver();
       process.exit(0);
     });
-    // Do not let a hung connection hold the process open forever.
     setTimeout(() => process.exit(1), 10_000).unref();
   };
 

@@ -8,7 +8,6 @@ import { cn } from '@/lib/cn';
 import { hueStyles } from '@/lib/color';
 import { categoryHue, PROJECT_STATUS_LABELS, skillLevelLabel } from '@/lib/format';
 
-/** A skill as a coloured, linked chip. Colour always encodes the category. */
 export function SkillChip({
   id,
   name,

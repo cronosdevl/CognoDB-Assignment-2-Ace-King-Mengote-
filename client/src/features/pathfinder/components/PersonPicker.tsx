@@ -9,13 +9,6 @@ import { Skeleton } from '@/components/ui/states';
 import { useDebounced } from '@/hooks/useDebounced';
 import { cn } from '@/lib/cn';
 
-/**
- * Type-ahead person selector.
- *
- * A plain <select> over 184 people is unusable, and loading them all to filter
- * client-side would defeat the point of the server-side search. This queries as
- * the user types and closes on outside click or Escape.
- */
 export function PersonPicker({
   value,
   onChange,

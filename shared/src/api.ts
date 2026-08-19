@@ -1,4 +1,4 @@
-/** Envelope types, error codes and request shapes used by the HTTP API. */
+// API 
 
 export interface ApiErrorBody {
   error: {
@@ -38,7 +38,7 @@ export interface HealthResponse {
   };
 }
 
-// --- request query shapes --------------------------------------------------
+// request query shapes 
 
 export interface PeopleQuery {
   q?: string;

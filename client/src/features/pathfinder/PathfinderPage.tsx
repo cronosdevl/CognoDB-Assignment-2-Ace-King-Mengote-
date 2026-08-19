@@ -22,8 +22,6 @@ export function PathfinderPage() {
   const [person, setPerson] = useState<PersonSummary | null>(null);
   const [targetRoleId, setTargetRoleId] = useState(roleIdParam ?? '');
 
-  // Seed the picker when arriving from a person's page, and provide a sensible
-  // default so the screen is never an empty form on first visit.
   const { data: linkedPerson } = usePerson(personIdParam ?? undefined);
   const { data: firstPage } = usePeople({ limit: 1, openToMove: true });
 
@@ -39,9 +37,6 @@ export function PathfinderPage() {
   const { data: roles } = useRoles();
   const { data: suggestions, isPending: suggestionsPending } = useRoleSuggestions(person?.id);
 
-  // Land on a worked example rather than an empty panel. The top suggestion is
-  // the person's most natural next move, so it is also the answer they most
-  // likely wanted; picking it means the screen explains itself on arrival.
   useEffect(() => {
     if (targetRoleId || roleIdParam) return;
     const first = suggestions?.[0]?.role.id;

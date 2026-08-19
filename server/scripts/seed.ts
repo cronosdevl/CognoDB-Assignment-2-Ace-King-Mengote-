@@ -1,12 +1,4 @@
-/**
- * Seed the CognoDB instance with the Meridian Labs dataset.
- *
- *   npm run seed          # idempotent upsert (MERGE everywhere)
- *   npm run seed:reset    # wipe first, then load
- *
- * Everything below goes through the same parameterised `defineQuery` runner the
- * API uses — there is no separate, looser path for writes.
- */
+
 import { redactedConnection } from '../src/config/env.js';
 import { checkHealth, closeDriver } from '../src/db/driver.js';
 import { type CypherQuery, read, write, writeVoid } from '../src/db/query.js';
@@ -38,7 +30,6 @@ import {
   UPSERT_WORKED_ON,
 } from './lib/schema.js';
 
-/** Small enough that a 256 MB instance never has to think about it. */
 const BATCH_SIZE = 400;
 const DELETE_BATCH_SIZE = 500;
 
@@ -60,9 +51,6 @@ async function applySchema(): Promise<void> {
     try {
       await writeVoid(constraint, {});
     } catch (error) {
-      // Index DDL varies across openCypher implementations. A missing index
-      // costs performance on a dataset this size, not correctness — so warn
-      // and carry on rather than aborting the whole seed.
       logger.warn(`  skipped ${constraint.name}: ${(error as Error).message}`);
     }
   }
@@ -72,8 +60,6 @@ async function resetDatabase(): Promise<void> {
   logger.warn('--reset supplied: deleting every node in the database');
   let total = 0;
   for (;;) {
-    // Must go through `write`: a DETACH DELETE in a read transaction is rejected
-    // by the server, not silently ignored.
     const [deleted] = await write(DELETE_BATCH, { batchSize: DELETE_BATCH_SIZE }, (record) =>
       Number(record.get('deleted')),
     );

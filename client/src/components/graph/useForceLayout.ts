@@ -30,14 +30,6 @@ function radiusFor(node: GraphNode): number {
   return 11 + node.weight * 9;
 }
 
-/**
- * Run a d3-force simulation to completion, then render once.
- *
- * Ticking into React state every frame would re-render the whole SVG sixty
- * times a second for no benefit — the layout is not interactive, it just needs
- * to settle. Running it synchronously off-screen and publishing the final
- * positions keeps the component cheap and the animation to a single CSS fade.
- */
 export function useForceLayout(
   nodes: GraphNode[],
   edges: GraphEdge[],
@@ -50,8 +42,6 @@ export function useForceLayout(
   });
   const simulationRef = useRef<Simulation<PositionedNode, undefined> | null>(null);
 
-  // Recompute only when the graph's shape actually changes, not on every
-  // parent render (the payload object identity changes on each refetch).
   const signature = useMemo(
     () => `${nodes.map((n) => n.id).join(',')}|${edges.map((e) => e.id).join(',')}|${width}x${height}`,
     [nodes, edges, width, height],
@@ -64,8 +54,6 @@ export function useForceLayout(
     }
 
     const simNodes: PositionedNode[] = nodes.map((node, index) => {
-      // Seed positions on a ring so the first tick is not a random explosion;
-      // the focus node starts pinned at the centre.
       const angle = (index / nodes.length) * Math.PI * 2;
       const spread = node.depth === 0 ? 0 : 80 + node.depth * 70;
       return {
@@ -96,8 +84,6 @@ export function useForceLayout(
           .strength(0.55),
       )
       .force('charge', forceManyBody<PositionedNode>().strength(-340).distanceMax(420))
-      // Extra room around the focus node so its always-visible name label has
-      // somewhere to sit without landing on a neighbour.
       .force(
         'collide',
         forceCollide<PositionedNode>((node) => node.radius + (node.depth === 0 ? 30 : 11)).strength(0.9),
@@ -109,7 +95,6 @@ export function useForceLayout(
 
     simulationRef.current = simulation;
 
-    // 320 ticks settles this graph size reliably and takes a few milliseconds.
     for (let i = 0; i < 320; i += 1) simulation.tick();
 
     const padding = 34;
@@ -127,8 +112,6 @@ export function useForceLayout(
       simulation.stop();
       simulationRef.current = null;
     };
-    // `signature` captures every input that should trigger a recompute.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signature]);
 
   return layout;

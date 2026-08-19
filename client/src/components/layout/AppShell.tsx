@@ -33,7 +33,6 @@ export function AppShell() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
 
-  // A navigation should never leave the drawer covering the page it opened.
   useEffect(() => {
     setMobileOpen(false);
   }, [location.pathname]);
