@@ -15,6 +15,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 
 import { DatabaseBanner } from '@/components/layout/DatabaseBanner';
+import { Logo } from '@/components/layout/Logo';
 import { useTheme } from '@/components/providers/ThemeProvider';
 import { cn } from '@/lib/cn';
 
@@ -56,9 +57,7 @@ export function AppShell() {
         )}
       >
         <div className="flex h-16 items-center gap-2.5 px-5">
-          <span className="flex size-8 items-center justify-center rounded-lg bg-[var(--color-accent)]">
-            <Waypoints className="size-4.5 text-white" />
-          </span>
+          <Logo className="size-8" />
           <div className="min-w-0">
             <p className="text-sm font-semibold tracking-tight text-[var(--color-ink)]">Wayfinder</p>
             <p className="truncate text-[11px] text-[var(--color-ink-faint)]">Meridian Labs</p>
